@@ -8,14 +8,9 @@ namespace Microsoft.EntityFrameworkCore.ModelBuilding;
 
 public abstract partial class ModelBuilderTest
 {
-    public abstract class ModelBuilderTestBase
+    public abstract class ModelBuilderTestBase(ModelBuilderFixtureBase fixture)
     {
-        protected ModelBuilderTestBase(ModelBuilderFixtureBase fixture)
-        {
-            Fixture = fixture;
-        }
-
-        protected virtual ModelBuilderFixtureBase Fixture { get; }
+        protected virtual ModelBuilderFixtureBase Fixture { get; } = fixture;
 
         protected abstract TestModelBuilder CreateModelBuilder(Action<ModelConfigurationBuilder>? configure = null);
 
@@ -51,6 +46,9 @@ public abstract partial class ModelBuilderTest
         public abstract TestHelpers TestHelpers { get; }
         public virtual DbContextOptionsBuilder AddOptions(DbContextOptionsBuilder builder) => builder;
         public virtual IServiceCollection AddServices(IServiceCollection services) => services;
+
+        public virtual bool ForeignKeysHaveIndexes
+            => true;
     }
 
     public abstract class TestModelBuilder : IInfrastructure<ModelBuilder>
@@ -125,6 +123,13 @@ public abstract partial class ModelBuilderTest
         public virtual TestModelBuilder UsePropertyAccessMode(PropertyAccessMode propertyAccessMode)
         {
             ModelBuilder.UsePropertyAccessMode(propertyAccessMode);
+
+            return this;
+        }
+
+        public virtual TestModelBuilder HasEmbeddedDiscriminatorName(string name)
+        {
+            ModelBuilder.HasEmbeddedDiscriminatorName(name);
 
             return this;
         }

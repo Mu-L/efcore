@@ -463,7 +463,11 @@ public abstract partial class ModelBuilderTest
     {
         public int Id { get; set; }
 
-        public List<DependentEntity>? InverseNav { get; set; }
+        public MyList<DependentEntity>? InverseNav { get; set; }
+    }
+
+    protected class MyList<T> : List<T>
+    {
     }
 
     protected class DependentEntity
@@ -1031,12 +1035,7 @@ public abstract partial class ModelBuilderTest
 
     protected class ManyToManyNavPrincipal
     {
-        private readonly List<NavDependent> _randomField;
-
-        public ManyToManyNavPrincipal()
-        {
-            _randomField = [];
-        }
+        private readonly List<NavDependent> _randomField = [];
 
         public int Id { get; set; }
         public string? Name { get; set; }

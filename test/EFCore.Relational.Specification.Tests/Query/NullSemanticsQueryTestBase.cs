@@ -17,14 +17,9 @@ namespace Microsoft.EntityFrameworkCore.Query;
 
 #nullable disable
 
-public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixture>
+public abstract class NullSemanticsQueryTestBase<TFixture>(TFixture fixture) : QueryTestBase<TFixture>(fixture)
     where TFixture : NullSemanticsQueryFixtureBase, new()
 {
-    protected NullSemanticsQueryTestBase(TFixture fixture)
-        : base(fixture)
-    {
-    }
-
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
     public virtual async Task Rewrite_compare_int_with_int(bool async)
@@ -616,6 +611,18 @@ public abstract class NullSemanticsQueryTestBase<TFixture> : QueryTestBase<TFixt
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Where_coalesce(bool async)
         => AssertQueryScalar(async, ss => ss.Set<NullSemanticsEntity1>().Where(e => e.NullableBoolA ?? true).Select(e => e.Id));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_coalesce_shortcircuit(bool async)
+        => AssertQueryScalar(async, ss => ss.Set<NullSemanticsEntity1>().Where(e => (bool?)(e.BoolA | e.BoolB) ?? e.NullableBoolA ?? true)
+            .Select(e => e.Id));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Where_coalesce_shortcircuit_many(bool async)
+        => AssertQueryScalar(async, ss => ss.Set<NullSemanticsEntity1>().Where(e => e.NullableBoolA ?? (bool?)(e.BoolA | e.BoolB) ?? e.NullableBoolB ?? e.BoolB)
+            .Select(e => e.Id));
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]

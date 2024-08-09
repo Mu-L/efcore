@@ -6,18 +6,13 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Microsoft.EntityFrameworkCore;
 
-public abstract class AspNetIdentityCustomTypesDefaultTestBase<TFixture>
+public abstract class AspNetIdentityCustomTypesDefaultTestBase<TFixture>(TFixture fixture)
     : AspNetIdentityTestBase<TFixture, CustomTypesIdentityContext, CustomUserString, CustomRoleString, string, CustomUserClaimString,
-        CustomUserRoleString, CustomUserLoginString, CustomRoleClaimString, CustomUserTokenString>
+        CustomUserRoleString, CustomUserLoginString, CustomRoleClaimString, CustomUserTokenString>(fixture)
     where TFixture : AspNetIdentityTestBase<TFixture, CustomTypesIdentityContext, CustomUserString, CustomRoleString, string,
         CustomUserClaimString, CustomUserRoleString, CustomUserLoginString, CustomRoleClaimString, CustomUserTokenString>.
     AspNetIdentityFixtureBase
 {
-    protected AspNetIdentityCustomTypesDefaultTestBase(TFixture fixture)
-        : base(fixture)
-    {
-    }
-
     [ConditionalFact]
     public async Task Can_lazy_load_User_navigations()
     {
@@ -170,9 +165,9 @@ public abstract class AspNetIdentityCustomTypesDefaultTestBase<TFixture>
                     "Property: CustomRoleClaimString.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd",
                     "Property: CustomRoleClaimString.ClaimType (string)",
                     "Property: CustomRoleClaimString.ClaimValue (string)",
-                    "Property: CustomRoleClaimString.RoleId (string) Required FK Index",
+                    $"Property: CustomRoleClaimString.RoleId (string) Required FK{(HasForeignKeyIndexes ? " Index" : "")}",
                 },
-                Indexes = { "{'RoleId'} ", },
+                Indexes = HasForeignKeyIndexes ? ["{'RoleId'} "] : [],
                 FKs =
                 {
                     "ForeignKey: CustomRoleClaimString {'RoleId'} -> CustomRoleString {'Id'} Required Cascade ToDependent: RoleClaims ToPrincipal: Role",
@@ -215,9 +210,9 @@ public abstract class AspNetIdentityCustomTypesDefaultTestBase<TFixture>
                     "Property: CustomUserClaimString.Id (int) Required PK AfterSave:Throw ValueGenerated.OnAdd",
                     "Property: CustomUserClaimString.ClaimType (string)",
                     "Property: CustomUserClaimString.ClaimValue (string)",
-                    "Property: CustomUserClaimString.UserId (string) Required FK Index",
+                    $"Property: CustomUserClaimString.UserId (string) Required FK{(HasForeignKeyIndexes ? " Index" : "")}",
                 },
-                Indexes = { "{'UserId'} ", },
+                Indexes = HasForeignKeyIndexes ? ["{'UserId'} "] : [],
                 FKs =
                 {
                     "ForeignKey: CustomUserClaimString {'UserId'} -> CustomUserString {'Id'} Required Cascade ToDependent: Claims ToPrincipal: User",
@@ -237,9 +232,9 @@ public abstract class AspNetIdentityCustomTypesDefaultTestBase<TFixture>
                     "Property: CustomUserLoginString.LoginProvider (string) Required PK AfterSave:Throw",
                     "Property: CustomUserLoginString.ProviderKey (string) Required PK AfterSave:Throw",
                     "Property: CustomUserLoginString.ProviderDisplayName (string)",
-                    "Property: CustomUserLoginString.UserId (string) Required FK Index",
+                    $"Property: CustomUserLoginString.UserId (string) Required FK{(HasForeignKeyIndexes ? " Index" : "")}",
                 },
-                Indexes = { "{'UserId'} ", },
+                Indexes = HasForeignKeyIndexes ? ["{'UserId'} "] : [],
                 FKs =
                 {
                     "ForeignKey: CustomUserLoginString {'UserId'} -> CustomUserString {'Id'} Required Cascade ToDependent: Logins ToPrincipal: User",
@@ -257,9 +252,9 @@ public abstract class AspNetIdentityCustomTypesDefaultTestBase<TFixture>
                 Properties =
                 {
                     "Property: CustomUserRoleString.UserId (string) Required PK FK AfterSave:Throw",
-                    "Property: CustomUserRoleString.RoleId (string) Required PK FK Index AfterSave:Throw",
+                    $"Property: CustomUserRoleString.RoleId (string) Required PK FK{(HasForeignKeyIndexes ? " Index" : "")} AfterSave:Throw",
                 },
-                Indexes = { "{'RoleId'} ", },
+                Indexes = HasForeignKeyIndexes ? ["{'RoleId'} "] : [],
                 FKs =
                 {
                     "ForeignKey: CustomUserRoleString {'RoleId'} -> CustomRoleString {'Id'} Required Cascade ToDependent: UserRoles ToPrincipal: Role",

@@ -48,6 +48,7 @@ public class CoreOptionsExtension : IDbContextOptionsExtension
     private WarningsConfiguration _warningsConfiguration
         = new WarningsConfiguration()
             .TryWithExplicit(CoreEventId.ManyServiceProvidersCreatedWarning, WarningBehavior.Throw)
+            .TryWithExplicit(CoreEventId.AccidentalEntityType, WarningBehavior.Throw)
             .TryWithExplicit(CoreEventId.LazyLoadOnDisposedContextWarning, WarningBehavior.Throw)
             .TryWithExplicit(CoreEventId.DetachedLazyLoadingWarning, WarningBehavior.Throw)
             .TryWithExplicit(CoreEventId.InvalidIncludePathError, WarningBehavior.Throw)
@@ -606,15 +607,10 @@ public class CoreOptionsExtension : IDbContextOptionsExtension
         }
     }
 
-    private sealed class ExtensionInfo : DbContextOptionsExtensionInfo
+    private sealed class ExtensionInfo(CoreOptionsExtension extension) : DbContextOptionsExtensionInfo(extension)
     {
         private int? _serviceProviderHash;
         private string? _logFragment;
-
-        public ExtensionInfo(CoreOptionsExtension extension)
-            : base(extension)
-        {
-        }
 
         private new CoreOptionsExtension Extension
             => (CoreOptionsExtension)base.Extension;

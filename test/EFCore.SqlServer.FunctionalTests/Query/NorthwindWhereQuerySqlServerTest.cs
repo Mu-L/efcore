@@ -1396,12 +1396,9 @@ END <> @__prm_0
 SELECT [p].[ProductID], [p].[Discontinued], [p].[ProductName], [p].[SupplierID], [p].[UnitPrice], [p].[UnitsInStock]
 FROM [Products] AS [p]
 WHERE [p].[Discontinued] = CASE
-    WHEN CASE
-        WHEN [p].[ProductID] > 50 THEN CAST(1 AS bit)
-        ELSE CAST(0 AS bit)
-    END <> @__prm_0 THEN CAST(1 AS bit)
+    WHEN [p].[ProductID] > 50 THEN CAST(1 AS bit)
     ELSE CAST(0 AS bit)
-END
+END ^ @__prm_0
 """);
     }
 
@@ -3427,6 +3424,66 @@ FROM [Orders] AS [o]
 WHERE [o].[OrderID] = 10252
 """);
     }
+
+    #region Evaluation order of predicates
+
+    public override async Task Take_and_Where_evaluation_order(bool async)
+    {
+        await base.Take_and_Where_evaluation_order(async);
+
+        AssertSql(
+            """
+@__p_0='3'
+
+SELECT [e0].[EmployeeID], [e0].[City], [e0].[Country], [e0].[FirstName], [e0].[ReportsTo], [e0].[Title]
+FROM (
+    SELECT TOP(@__p_0) [e].[EmployeeID], [e].[City], [e].[Country], [e].[FirstName], [e].[ReportsTo], [e].[Title]
+    FROM [Employees] AS [e]
+    ORDER BY [e].[EmployeeID]
+) AS [e0]
+WHERE [e0].[EmployeeID] % 2 = 0
+ORDER BY [e0].[EmployeeID]
+""");
+    }
+
+    public override async Task Skip_and_Where_evaluation_order(bool async)
+    {
+        await base.Skip_and_Where_evaluation_order(async);
+
+        AssertSql(
+            """
+@__p_0='3'
+
+SELECT [e0].[EmployeeID], [e0].[City], [e0].[Country], [e0].[FirstName], [e0].[ReportsTo], [e0].[Title]
+FROM (
+    SELECT [e].[EmployeeID], [e].[City], [e].[Country], [e].[FirstName], [e].[ReportsTo], [e].[Title]
+    FROM [Employees] AS [e]
+    ORDER BY [e].[EmployeeID]
+    OFFSET @__p_0 ROWS
+) AS [e0]
+WHERE [e0].[EmployeeID] % 2 = 0
+ORDER BY [e0].[EmployeeID]
+""");
+    }
+
+    public override async Task Take_and_Distinct_evaluation_order(bool async)
+    {
+        await base.Take_and_Distinct_evaluation_order(async);
+
+        AssertSql(
+            """
+@__p_0='3'
+
+SELECT DISTINCT [c0].[ContactTitle]
+FROM (
+    SELECT TOP(@__p_0) [c].[ContactTitle]
+    FROM [Customers] AS [c]
+    ORDER BY [c].[ContactTitle]
+) AS [c0]
+""");
+    }
+
+    #endregion Evaluation order of predicates
 
     private void AssertSql(params string[] expected)
         => Fixture.TestSqlLoggerFactory.AssertBaseline(expected);

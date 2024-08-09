@@ -132,7 +132,7 @@ public class SearchConditionConvertingExpressionVisitor : SqlExpressionVisitor
 
         _isSearchCondition = parentSearchCondition;
 
-        return ApplyConversion(caseExpression.Update(operand, whenClauses, elseResult), condition: false);
+        return ApplyConversion(_sqlExpressionFactory.Case(operand, whenClauses, elseResult, caseExpression), condition: false);
     }
 
     /// <summary>
@@ -346,6 +346,46 @@ public class SearchConditionConvertingExpressionVisitor : SqlExpressionVisitor
 
         _isSearchCondition = parentIsSearchCondition;
 
+        if (!parentIsSearchCondition
+            && (newLeft.Type == typeof(bool) || newLeft.Type.IsEnum || newLeft.Type.IsInteger())
+            && (newRight.Type == typeof(bool) || newRight.Type.IsEnum || newRight.Type.IsInteger())
+            && sqlBinaryExpression.OperatorType is ExpressionType.NotEqual or ExpressionType.Equal)
+        {
+            // "lhs != rhs" is the same as "CAST(lhs ^ rhs AS BIT)", except that
+            // the first is a boolean, the second is a BIT
+            var result = _sqlExpressionFactory.MakeBinary(
+                ExpressionType.ExclusiveOr,
+                newLeft,
+                newRight,
+                null)!;
+
+            if (result.Type != typeof(bool))
+            {
+                result = _sqlExpressionFactory.Convert(result, typeof(bool), sqlBinaryExpression.TypeMapping);
+            }
+
+            // "lhs == rhs" is the same as "NOT(lhs != rhs)" aka "~(lhs ^ rhs)"
+            if (sqlBinaryExpression.OperatorType is ExpressionType.Equal)
+            {
+                result = _sqlExpressionFactory.MakeUnary(
+                    ExpressionType.OnesComplement,
+                    result,
+                    result.Type,
+                    result.TypeMapping
+                )!;
+            }
+
+            return result;
+        }
+
+        if (sqlBinaryExpression.OperatorType is ExpressionType.NotEqual or ExpressionType.Equal
+            && newLeft is SqlUnaryExpression { OperatorType: ExpressionType.OnesComplement } negatedLeft
+            && newRight is SqlUnaryExpression { OperatorType: ExpressionType.OnesComplement } negatedRight)
+        {
+            newLeft = negatedLeft.Operand;
+            newRight = negatedRight.Operand;
+        }
+
         sqlBinaryExpression = sqlBinaryExpression.Update(newLeft, newRight);
         var condition = sqlBinaryExpression.OperatorType is ExpressionType.AndAlso
             or ExpressionType.OrElse
@@ -378,10 +418,16 @@ public class SearchConditionConvertingExpressionVisitor : SqlExpressionVisitor
                 if (!_isSearchCondition && sqlUnaryExpression.Operand is not (ExistsExpression or InExpression or LikeExpression))
                 {
                     var negatedOperand = (SqlExpression)Visit(sqlUnaryExpression.Operand);
-                    return _sqlExpressionFactory.MakeBinary(
-                        ExpressionType.ExclusiveOr,
+
+                    if (negatedOperand is SqlUnaryExpression { OperatorType: ExpressionType.OnesComplement } unary)
+                    {
+                        return unary.Operand;
+                    }
+
+                    return _sqlExpressionFactory.MakeUnary(
+                        ExpressionType.OnesComplement,
                         negatedOperand,
-                        _sqlExpressionFactory.Constant(true, negatedOperand.TypeMapping),
+                        negatedOperand.Type,
                         negatedOperand.TypeMapping
                     )!;
                 }

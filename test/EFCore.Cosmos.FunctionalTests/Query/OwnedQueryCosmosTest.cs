@@ -18,15 +18,33 @@ public class OwnedQueryCosmosTest : OwnedQueryTestBase<OwnedQueryCosmosTest.Owne
         Fixture.TestSqlLoggerFactory.SetTestOutputHelper(testOutputHelper);
     }
 
-    // Fink.Barton is a non-owned navigation, cross-document join
-    public override Task Query_loads_reference_nav_automatically_in_projection(bool async)
-        => AssertTranslationFailedWithDetails(
-            () => base.Query_loads_reference_nav_automatically_in_projection(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+    public override async Task SelectMany_on_owned_reference_followed_by_regular_entity_and_collection(bool async)
+    {
+        await AssertTranslationFailedWithDetails(
+            () => base.SelectMany_on_owned_reference_followed_by_regular_entity_and_collection(async),
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Non-correlated queries not supported by Cosmos
-    public override Task Query_with_owned_entity_equality_operator(bool async)
-        => AssertTranslationFailed(() => base.Query_with_owned_entity_equality_operator(async));
+        AssertSql();
+    }
+
+    public override async Task Query_loads_reference_nav_automatically_in_projection(bool async)
+    {
+        // Fink.Barton is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
+            () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference(async),
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
+
+        AssertSql();
+    }
+
+    public override async Task Query_with_owned_entity_equality_operator(bool async)
+    {
+        await AssertTranslationFailedWithDetails(
+            () => base.Query_with_owned_entity_equality_operator(async),
+            CosmosStrings.NonCorrelatedSubqueriesNotSupported);
+
+        AssertSql();
+    }
 
     [ConditionalTheory]
     public override Task Navigation_rewrite_on_owned_collection(bool async)
@@ -37,9 +55,9 @@ public class OwnedQueryCosmosTest : OwnedQueryTestBase<OwnedQueryCosmosTest.Owne
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(c["Orders"]) > 0))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(c["Orders"]) > 0))
 ORDER BY c["Id"]
 """);
             });
@@ -56,12 +74,12 @@ ORDER BY c["Id"]
 
             AssertSql(
                 """
-SELECT (ARRAY(
-    SELECT VALUE (t["Id"] != 42)
-    FROM t IN c["Orders"]
-    ORDER BY t["Id"])[0] ?? false) AS c
+SELECT VALUE (ARRAY(
+    SELECT VALUE (o["Id"] != 42)
+    FROM o IN c["Orders"]
+    ORDER BY o["Id"])[0] ?? false)
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Id"]
 """);
         }
@@ -88,9 +106,9 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["Country"]["Name"] = "USA"))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["Country"]["Name"] = "USA"))
 """);
             });
 
@@ -102,9 +120,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c["PersonAddress"]["Country"]["Name"]
+SELECT VALUE c["PersonAddress"]["Country"]["Name"]
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["Country"]["Name"] = "USA"))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["Country"]["Name"] = "USA"))
 """);
             });
 
@@ -116,9 +134,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -130,9 +148,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("Branch", "LeafA")
+WHERE c["Terminator"] IN ("Branch", "LeafA")
 """);
             });
 
@@ -144,9 +162,9 @@ WHERE c["Discriminator"] IN ("Branch", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("Branch", "LeafA")
+WHERE c["Terminator"] IN ("Branch", "LeafA")
 """);
             });
 
@@ -158,17 +176,21 @@ WHERE c["Discriminator"] IN ("Branch", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] = "LeafA")
+WHERE (c["Terminator"] = "LeafA")
 """);
             });
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Filter_owned_entity_chained_with_regular_entity_followed_by_projecting_owned_collection(bool async)
-        => AssertTranslationFailedWithDetails(
+    public override async Task Filter_owned_entity_chained_with_regular_entity_followed_by_projecting_owned_collection(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Filter_owned_entity_chained_with_regular_entity_followed_by_projecting_owned_collection(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
+
+        AssertSql();
+    }
 
     public override async Task Set_throws_for_owned_type(bool async)
     {
@@ -177,65 +199,106 @@ WHERE (c["Discriminator"] = "LeafA")
         AssertSql();
     }
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity(bool async)
-        => AssertTranslationFailedWithDetails(
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_filter(bool async)
-        => AssertTranslationFailedWithDetails(
-            () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+        AssertSql();
+    }
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference(bool async)
-        => AssertTranslationFailedWithDetails(
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_filter(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
+            () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_filter(async),
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
+
+        AssertSql();
+    }
+
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference_and_scalar(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference_and_scalar(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference_and_scalar(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_collection(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_collection(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_collection(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_collection_count(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_collection_count(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_collection_count(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_property(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_property(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_property(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference_in_predicate_and_projection(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference_in_predicate_and_projection(
+        bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Navigation_rewrite_on_owned_reference_followed_by_regular_entity_and_another_reference_in_predicate_and_projection(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Project_multiple_owned_navigations(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Project_multiple_owned_navigations(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Project_multiple_owned_navigations(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
 
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task Project_multiple_owned_navigations_with_expansion_on_owned_collections(bool async)
-        => AssertTranslationFailedWithDetails(
+        AssertSql();
+    }
+
+    public override async Task Project_multiple_owned_navigations_with_expansion_on_owned_collections(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.Project_multiple_owned_navigations_with_expansion_on_owned_collections(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery("Planet", "OwnedPerson"));
+
+        AssertSql();
+    }
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
@@ -247,10 +310,10 @@ WHERE (c["Discriminator"] = "LeafA")
 
                 AssertSql(
                     """
-SELECT a
+SELECT VALUE o
 FROM root c
-JOIN a IN c["Orders"]
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+JOIN o IN c["Orders"]
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -267,25 +330,24 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 SELECT VALUE
 {
     "PersonId" : c["Id"],
-    "OrderId" : a["Id"]
+    "OrderId" : o["Id"]
 }
 FROM root c
-JOIN a IN c["Orders"]
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+JOIN o IN c["Orders"]
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
     // Address.Planet is a non-owned navigation, cross-document join
-    public override Task SelectMany_on_owned_reference_followed_by_regular_entity_and_collection(bool async)
-        => AssertTranslationFailedWithDetails(
-            () => base.SelectMany_on_owned_reference_followed_by_regular_entity_and_collection(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
-
-    // Address.Planet is a non-owned navigation, cross-document join
-    public override Task SelectMany_on_owned_reference_with_entity_in_between_ending_in_owned_collection(bool async)
-        => AssertTranslationFailedWithDetails(
+    public override async Task SelectMany_on_owned_reference_with_entity_in_between_ending_in_owned_collection(bool async)
+    {
+        // Address.Planet is a non-owned navigation, cross-document join
+        await AssertTranslationFailedWithDetails(
             () => base.SelectMany_on_owned_reference_with_entity_in_between_ending_in_owned_collection(async),
-            CosmosStrings.CrossDocumentJoinNotSupported);
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery(nameof(Planet), nameof(OwnedPerson)));
+
+        AssertSql();
+    }
 
     // Non-correlated queries not supported by Cosmos
     public override Task Query_with_owned_entity_equality_method(bool async)
@@ -303,9 +365,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Discriminator"] = "LeafA"))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Terminator"] = "LeafA"))
 """);
             });
 
@@ -322,22 +384,28 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
                 // TODO: The following should project out c["PersonAddress"], not c: #34067
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Id"]
 """);
             });
 
-    // TODO: #34068
-    public override async Task Project_owned_reference_navigation_which_does_not_own_additional(bool async)
-    {
-        // Always throws for sync.
-        if (async)
-        {
-            await Assert.ThrowsAsync<NullReferenceException>(() => base.Project_owned_reference_navigation_which_does_not_own_additional(async));
-        }
-    }
+    // Issue #34068
+    public override Task Project_owned_reference_navigation_which_does_not_own_additional(bool async)
+        => CosmosTestHelpers.Instance.NoSyncTest(
+            async, async a =>
+            {
+                await base.Project_owned_reference_navigation_which_does_not_own_additional(a);
+
+                AssertSql(
+                    """
+SELECT VALUE c
+FROM root c
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+ORDER BY c["Id"]
+""");
+            });
 
     public override Task No_ignored_include_warning_when_implicit_load(bool async)
         => CosmosTestHelpers.Instance.NoSyncTest(
@@ -347,9 +415,9 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT COUNT(1) AS c
+SELECT VALUE COUNT(1)
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -385,13 +453,12 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
                     assertOrder: true,
                     elementAsserter: (e, a) => AssertCollection(e, a));
 
-                // TODO: The following should project out a["Details"], not a: #34067
                 AssertSql(
                     """
-SELECT a["Details"]
+SELECT VALUE o["Details"]
 FROM root c
-JOIN a IN c["Orders"]
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(a["Details"]) = 1))
+JOIN o IN c["Orders"]
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(o["Details"]) = 1))
 ORDER BY c["Id"]
 """);
             });
@@ -415,10 +482,10 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT a
+SELECT VALUE o
 FROM root c
-JOIN a IN c["Orders"]
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(a["Details"]) = 1))
+JOIN o IN c["Orders"]
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(o["Details"]) = 1))
 ORDER BY c["Id"]
 """);
             });
@@ -442,10 +509,10 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT a
+SELECT VALUE o
 FROM root c
-JOIN a IN c["Orders"]
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(a["Details"]) = 1))
+JOIN o IN c["Orders"]
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(o["Details"]) = 1))
 ORDER BY c["Id"]
 """);
             });
@@ -469,10 +536,10 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT a["Details"]
+SELECT VALUE o["Details"]
 FROM root c
-JOIN a IN c["Orders"]
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(a["Details"]) = 1))
+JOIN o IN c["Orders"]
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(o["Details"]) = 1))
 ORDER BY c["Id"]
 """);
             });
@@ -496,10 +563,10 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT a
+SELECT VALUE o
 FROM root c
-JOIN a IN c["Orders"]
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(a["Details"]) = 1))
+JOIN o IN c["Orders"]
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(o["Details"]) = 1))
 ORDER BY c["Id"]
 """);
             });
@@ -516,9 +583,9 @@ ORDER BY c["Id"]
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Name"] = "Mona Cy"))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Name"] = "Mona Cy"))
 """);
             });
 
@@ -530,9 +597,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["ZipCode"] = 38654))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["ZipCode"] = 38654))
 """);
             });
 
@@ -544,9 +611,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Name"] = "Mona Cy"))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Name"] = "Mona Cy"))
 """);
             });
 
@@ -558,9 +625,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -572,9 +639,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c["PersonAddress"]["AddressLine"]
+SELECT VALUE c["PersonAddress"]["AddressLine"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -586,9 +653,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -605,9 +672,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
             AssertSql(
                 """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Name"], c["Id"]
 """);
         }
@@ -626,9 +693,9 @@ ORDER BY c["Name"], c["Id"]
 
             AssertSql(
                 """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Name"], c["Id"]
 """);
         }
@@ -647,9 +714,9 @@ ORDER BY c["Name"], c["Id"]
 
             AssertSql(
                 """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["PersonAddress"]["ZipCode"], c["Id"]
 """);
         }
@@ -668,9 +735,9 @@ ORDER BY c["PersonAddress"]["ZipCode"], c["Id"]
 
             AssertSql(
                 """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["PersonAddress"]["ZipCode"], c["Id"]
 """);
         }
@@ -704,9 +771,9 @@ ORDER BY c["PersonAddress"]["ZipCode"], c["Id"]
 
                 AssertSql(
                     """
-SELECT c["PersonAddress"]["ZipCode"] AS Nation
+SELECT VALUE c["PersonAddress"]["ZipCode"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -718,9 +785,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c["PersonAddress"]["ZipCode"] AS Nation
+SELECT VALUE c["PersonAddress"]["ZipCode"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -737,12 +804,12 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c["Name"]
+SELECT VALUE c["Name"]
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND ((
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND ((
     SELECT VALUE COUNT(1)
-    FROM t IN c["Orders"]
-    WHERE (DateTimePart("yyyy", t["OrderDate"]) = 2018)) = 1))
+    FROM o IN c["Orders"]
+    WHERE (DateTimePart("yyyy", o["OrderDate"]) = 2018)) = 1))
 """);
             });
 
@@ -781,9 +848,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND ((
 
             AssertSql(
                 """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["PersonAddress"]["PlaceType"], c["Id"]
 """);
         }
@@ -796,38 +863,45 @@ ORDER BY c["PersonAddress"]["PlaceType"], c["Id"]
                 await base.Query_on_collection_entry_works_for_owned_collection(a);
 
                 AssertSql(
-                    """
-SELECT c
-FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Id"] = 1))
-OFFSET 0 LIMIT 2
-""",
+                    """ReadItem(None, 1)""",
                     //
                     """
 @__p_0='1'
 
-SELECT a
+SELECT VALUE o
 FROM root c
-JOIN a IN c["Orders"]
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (a["ClientId"] = @__p_0))
+JOIN o IN c["Orders"]
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (o["ClientId"] = @__p_0))
 """);
             });
 
-    // Non-correlated queries not supported by Cosmos
-    public override Task Projecting_collection_correlated_with_keyless_entity_after_navigation_works_using_parent_identifiers(
+    public override async Task Projecting_collection_correlated_with_keyless_entity_after_navigation_works_using_parent_identifiers(
         bool async)
-        => AssertTranslationFailed(
-            () => base.Projecting_collection_correlated_with_keyless_entity_after_navigation_works_using_parent_identifiers(async));
+    {
+        await AssertTranslationFailedWithDetails(
+            () => base.Projecting_collection_correlated_with_keyless_entity_after_navigation_works_using_parent_identifiers(async),
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery(nameof(Barton), nameof(Fink)));
 
-    // Non-correlated queries not supported by Cosmos
-    public override Task Left_join_on_entity_with_owned_navigations(bool async)
-        => AssertTranslationFailed(
-            () => base.Left_join_on_entity_with_owned_navigations(async));
+        AssertSql();
+    }
 
-    // Non-correlated queries not supported by Cosmos
-    public override Task Left_join_on_entity_with_owned_navigations_complex(bool async)
-        => AssertTranslationFailed(
-            () => base.Left_join_on_entity_with_owned_navigations_complex(async));
+    public override async Task Left_join_on_entity_with_owned_navigations(bool async)
+    {
+        await AssertTranslationFailedWithDetails(
+            () => base.Left_join_on_entity_with_owned_navigations(async),
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery(nameof(OwnedPerson), nameof(Planet)));
+
+        AssertSql();
+    }
+
+    public override async Task Left_join_on_entity_with_owned_navigations_complex(bool async)
+    {
+        await AssertTranslationFailedWithDetails(
+            () => base.Left_join_on_entity_with_owned_navigations_complex(async),
+            CosmosStrings.MultipleRootEntityTypesReferencedInQuery(nameof(OwnedPerson), nameof(Planet)));
+
+        AssertSql();
+    }
 
     // TODO: GroupBy, #17313
     public override Task GroupBy_aggregate_on_owned_navigation_in_aggregate_selector(bool async)
@@ -841,9 +915,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (a[
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["ZipCode"] = 38654))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["ZipCode"] = 38654))
 """);
             });
 
@@ -855,9 +929,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["ZipCode"] = 38654))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["PersonAddress"]["ZipCode"] = 38654))
 """);
             });
 
@@ -873,9 +947,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c["PersonAddress"]["AddressLine"]
+SELECT VALUE c["PersonAddress"]["AddressLine"]
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -887,9 +961,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("HeliumBalloon", "HydrogenBalloon")
+WHERE c["Terminator"] IN ("HeliumBalloon", "HydrogenBalloon")
 """);
             });
 
@@ -904,9 +978,9 @@ WHERE c["Discriminator"] IN ("HeliumBalloon", "HydrogenBalloon")
 @__p_0='1'
 @__p_1='2'
 
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Id"]
 OFFSET @__p_0 LIMIT @__p_1
 """);
@@ -923,9 +997,9 @@ OFFSET @__p_0 LIMIT @__p_1
 @__p_0='1'
 @__p_1='2'
 
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Id"]
 OFFSET @__p_0 LIMIT @__p_1
 """);
@@ -939,13 +1013,16 @@ OFFSET @__p_0 LIMIT @__p_1
             await CosmosTestHelpers.Instance.NoSyncTest(
                 async, async a =>
                 {
-                    await base.Non_nullable_property_through_optional_navigation(a);
+                    await Assert.ThrowsAsync<NullReferenceException>(
+                        () => AssertQuery(
+                            async,
+                            ss => ss.Set<Barton>().Select(e => new { e.Throned.Value })));
 
                     AssertSql(
                         """
-SELECT c["Throned"]["Value"]
+SELECT VALUE c["Throned"]["Value"]
 FROM root c
-WHERE (c["Discriminator"] = "Barton")
+WHERE (c["Terminator"] = "Barton")
 """);
                 });
         }
@@ -959,9 +1036,9 @@ WHERE (c["Discriminator"] = "Barton")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -973,9 +1050,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] = "Star")
+WHERE (c["Terminator"] = "Star")
 """);
             });
 
@@ -987,9 +1064,9 @@ WHERE (c["Discriminator"] = "Star")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 """);
             });
 
@@ -1001,9 +1078,9 @@ WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Id"] = 1))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Id"] = 1))
 """);
             });
 
@@ -1017,9 +1094,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
                     """
 @__p_0='2'
 
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Id"]
 OFFSET 0 LIMIT @__p_0
 """);
@@ -1037,9 +1114,9 @@ OFFSET 0 LIMIT @__p_0
                     """
 @__p_0='2'
 
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
+WHERE c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA")
 ORDER BY c["Id"]
 OFFSET 0 LIMIT @__p_0
 """);
@@ -1055,9 +1132,9 @@ OFFSET 0 LIMIT @__p_0
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(c["Orders"]) = 2))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(c["Orders"]) = 2))
 """);
             });
 
@@ -1071,9 +1148,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(c["Orders"]) > 0))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(c["Orders"]) > 0))
 """);
             });
 
@@ -1087,12 +1164,12 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND EXISTS (
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND EXISTS (
     SELECT 1
-    FROM t IN c["Orders"]
-    WHERE (t["Id"] = -30)))
+    FROM o IN c["Orders"]
+    WHERE (o["Id"] = -30)))
 """);
             });
 
@@ -1106,12 +1183,12 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND EXI
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND EXISTS (
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND EXISTS (
     SELECT 1
-    FROM t IN c["Orders"]
-    WHERE (t["Id"] = -30)))
+    FROM o IN c["Orders"]
+    WHERE (o["Id"] = -30)))
 """);
             });
 
@@ -1125,9 +1202,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND EXI
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Orders"][1]["Id"] = -11))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c["Orders"][1]["Id"] = -11))
 """);
             });
 
@@ -1141,9 +1218,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (c[
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND ((c["Orders"][10] ?? null)["Id"] = -11))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND ((c["Orders"][10] ?? null)["Id"] = -11))
 """);
             });
 
@@ -1160,12 +1237,12 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND ((c
 
             AssertSql(
                 """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY(
-    SELECT VALUE t["Id"]
-    FROM t IN c["Orders"]
-    ORDER BY t["Id"])[1] = -10))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY(
+    SELECT VALUE o["Id"]
+    FROM o IN c["Orders"]
+    ORDER BY o["Id"])[1] = -10))
 """);
         }
     }
@@ -1180,9 +1257,9 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(ARRAY_SLICE(c["Orders"], 1, 1)) = 1))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(ARRAY_SLICE(c["Orders"], 1, 1)) = 1))
 """);
             });
 
@@ -1196,12 +1273,12 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (DateTimePart("yyyy", (ARRAY(
-    SELECT VALUE t["OrderDate"]
-    FROM t IN c["Orders"]
-    WHERE (t["Id"] > -20))[0] ?? "0001-01-01T00:00:00")) = 2018))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (DateTimePart("yyyy", (ARRAY(
+    SELECT VALUE o["OrderDate"]
+    FROM o IN c["Orders"]
+    WHERE (o["Id"] > -20))[0] ?? "0001-01-01T00:00:00")) = 2018))
 """);
             });
 
@@ -1229,15 +1306,15 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (Da
 
                 AssertSql(
                     """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(SetUnion(ARRAY(
-    SELECT VALUE t
-    FROM t IN c["Orders"]
-    WHERE (t["Id"] = -10)), ARRAY(
-    SELECT VALUE t
-    FROM t IN c["Orders"]
-    WHERE (t["Id"] = -11)))) = 2))
+WHERE (c["Terminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (ARRAY_LENGTH(SetUnion(ARRAY(
+    SELECT VALUE o
+    FROM o IN c["Orders"]
+    WHERE (o["Id"] = -10)), ARRAY(
+    SELECT VALUE o0
+    FROM o0 IN c["Orders"]
+    WHERE (o0["Id"] = -11)))) = 2))
 """);
             });
 
@@ -1265,9 +1342,12 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
 
         protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
         {
+            modelBuilder.HasDefaultContainer("OwnedQueryTest");
+
             modelBuilder.Entity<OwnedPerson>(
                 eb =>
                 {
+                    eb.ToContainer("OwnedPeople");
                     eb.IndexerProperty<string>("Name");
                     eb.HasData(
                         new
@@ -1546,6 +1626,8 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
             modelBuilder.Entity<Planet>(
                 pb =>
                 {
+                    pb.ToContainer("Planets");
+                    pb.IncludeDiscriminatorInJsonId();
                     pb.HasData(
                         new
                         {
@@ -1558,6 +1640,8 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
             modelBuilder.Entity<Moon>(
                 mb =>
                 {
+                    mb.ToContainer("Planets");
+                    mb.IncludeDiscriminatorInJsonId();
                     mb.HasData(
                         new
                         {
@@ -1571,6 +1655,8 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
             modelBuilder.Entity<Star>(
                 sb =>
                 {
+                    sb.ToContainer("Planets");
+                    sb.IncludeDiscriminatorInJsonId();
                     sb.HasData(
                         new
                         {
@@ -1602,6 +1688,8 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
             modelBuilder.Entity<Barton>(
                 b =>
                 {
+                    b.ToContainer("Bartons");
+                    b.IncludeDiscriminatorInJsonId();
                     b.OwnsOne(
                         e => e.Throned, b => b.HasData(
                             new
@@ -1615,12 +1703,28 @@ WHERE (c["Discriminator"] IN ("OwnedPerson", "Branch", "LeafB", "LeafA") AND (AR
                         new Barton { Id = 2, Simple = "Not" });
                 });
 
-            modelBuilder.Entity<Fink>().HasData(
-                new { Id = 1, BartonId = 1 });
+            modelBuilder.Entity<Fink>(
+                b =>
+                {
+                    b.ToContainer("Bartons");
+                    b.IncludeDiscriminatorInJsonId();
+                    b.HasData(
+                        new { Id = 1, BartonId = 1 });
+                });
 
-            modelBuilder.Entity<Balloon>();
-            modelBuilder.Entity<HydrogenBalloon>().OwnsOne(e => e.Gas);
-            modelBuilder.Entity<HeliumBalloon>().OwnsOne(e => e.Gas);
+            modelBuilder
+                .Entity<Balloon>()
+                .ToContainer("Balloons");
+
+            modelBuilder
+                .Entity<HydrogenBalloon>()
+                .OwnsOne(e => e.Gas);
+
+            modelBuilder
+                .Entity<HeliumBalloon>()
+                .OwnsOne(e => e.Gas);
+
+            modelBuilder.HasEmbeddedDiscriminatorName("Terminator");
         }
     }
 }

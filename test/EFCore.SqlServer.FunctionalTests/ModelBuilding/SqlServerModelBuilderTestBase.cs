@@ -503,7 +503,7 @@ public class SqlServerModelBuilderTestBase : RelationalModelBuilderTest
                     StoreObjectIdentifier.Create(principalType, StoreObjectType.Table)!.Value));
             Assert.Equal(2, bunFk.GetMappedConstraints().Count());
 
-            Assert.Empty(bunType.GetDeclaredForeignKeys().Where(fk => fk.IsBaseLinking()));
+            Assert.DoesNotContain(bunType.GetDeclaredForeignKeys(), fk => fk.IsBaseLinking());
 
             var sesameBunType = model.FindEntityType(typeof(SesameBun))!;
             Assert.Empty(sesameBunType.GetDeclaredIndexes());
@@ -1859,6 +1859,32 @@ public class SqlServerModelBuilderTestBase : RelationalModelBuilderTest
             Assert.Equal(2, ownedEntities.Count());
             Assert.Equal(2, ownedEntities.Where(e => e.IsMappedToJson()).Count());
             Assert.True(ownedEntities.All(x => x.GetViewName() == "MyView"));
+        }
+
+        [ConditionalFact]
+        public virtual void Json_entity_mapped_to_view_with_custom_schema()
+        {
+            var modelBuilder = CreateModelBuilder();
+            modelBuilder.Entity<JsonEntity>(
+                b =>
+                {
+                    b.ToView("MyView", "MySchema");
+                    b.OwnsOne(x => x.OwnedReference1, bb => bb.ToJson());
+                    b.Ignore(x => x.OwnedReference2);
+                    b.OwnsMany(x => x.OwnedCollection1, bb => bb.ToJson());
+                    b.Ignore(x => x.OwnedCollection2);
+                });
+
+            var model = modelBuilder.FinalizeModel();
+
+            var owner = model.FindEntityType(typeof(JsonEntity))!;
+            Assert.Equal("MyView", owner.GetViewName());
+
+            var ownedEntities = model.FindEntityTypes(typeof(OwnedEntity));
+            Assert.Equal(2, ownedEntities.Count());
+            Assert.Equal(2, ownedEntities.Where(e => e.IsMappedToJson()).Count());
+            Assert.True(ownedEntities.All(x => x.GetViewName() == "MyView"));
+            Assert.True(ownedEntities.All(x => x.GetViewSchema() == "MySchema"));
         }
 
         [ConditionalFact]

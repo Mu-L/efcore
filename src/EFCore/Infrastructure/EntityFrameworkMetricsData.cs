@@ -30,6 +30,7 @@ public static class EntityFrameworkMetricsData
     private static long _totalExecutionStrategyOperationFailures;
     private static long _totalOptimisticConcurrencyFailures;
     private static CacheInfo _compiledQueryCacheInfo;
+    private static CacheInfo _compiledQueryCacheInfoEventSource;
 
     /// <summary>
     /// Indicates that a new <see cref="DbContext" /> instance is being initialized.
@@ -46,7 +47,7 @@ public static class EntityFrameworkMetricsData
     /// <summary>
     /// Number of currently active <see cref="DbContext" /> instances.
     /// </summary>
-    public static int GetActiveDbContexts()
+    internal static int GetActiveDbContexts()
         => Volatile.Read(ref _activeDbContexts);
 
     /// <summary>
@@ -58,7 +59,7 @@ public static class EntityFrameworkMetricsData
     /// <summary>
     /// Cumulative count of queries executed.
     /// </summary>
-    public static long GetTotalQueriesExecuted()
+    internal static long GetTotalQueriesExecuted()
         => Interlocked.Read(ref _totalQueriesExecuted);
 
     /// <summary>
@@ -70,27 +71,38 @@ public static class EntityFrameworkMetricsData
     /// <summary>
     /// Cumulative count of changes saved.
     /// </summary>
-    public static long GetTotalSaveChanges()
+    internal static long GetTotalSaveChanges()
         => Interlocked.Read(ref _totalSaveChanges);
 
     /// <summary>
     /// Indicates a hit in the compiled query cache, signifying that query compilation will not need to occur.
     /// </summary>
     public static void ReportCompiledQueryCacheHit()
-        => Interlocked.Increment(ref _compiledQueryCacheInfo.Hits);
+    {
+        Interlocked.Increment(ref _compiledQueryCacheInfo.Hits);
+        Interlocked.Increment(ref _compiledQueryCacheInfoEventSource.Hits);
+    }
 
     /// <summary>
     /// Indicates a miss in the compiled query cache, signifying that query compilation will need to occur.
     /// </summary>
     public static void ReportCompiledQueryCacheMiss()
-        => Interlocked.Increment(ref _compiledQueryCacheInfo.Misses);
+    {
+        Interlocked.Increment(ref _compiledQueryCacheInfo.Misses);
+        Interlocked.Increment(ref _compiledQueryCacheInfoEventSource.Misses);
+    }
 
     /// <summary>
     /// Gets number of hits and misses and also the computed hit rate for the compiled query cache.
     /// </summary>
-    /// <param name="reset">Whether to reset counters when returning the result.</param>
-    public static (int hits, int misses, double hitRate) GetCompiledQueryCacheHitsMissesHitRate(bool reset = true)
-        => _compiledQueryCacheInfo.CalculateHitsMissesHitRate(reset);
+    internal static (int hits, int misses, double hitRate) GetCompiledQueryCacheHitRate()
+        => _compiledQueryCacheInfo.CalculateHitsMissesHitRate(false);
+
+    /// <summary>
+    /// Gets number of hits and misses and also the computed hit rate for the compiled query cache.
+    /// </summary>
+    internal static (int hits, int misses, double hitRate) GetCompiledQueryCacheHitRateEventSource()
+        => _compiledQueryCacheInfoEventSource.CalculateHitsMissesHitRate(true);
 
     /// <summary>
     /// Indicates that an operation executed by an <see cref="IExecutionStrategy" /> failed (and may be retried).
@@ -101,7 +113,7 @@ public static class EntityFrameworkMetricsData
     /// <summary>
     /// Cumulative number of failed operation executed by an <see cref="IExecutionStrategy" />.
     /// </summary>
-    public static long GetTotalExecutionStrategyOperationFailures()
+    internal static long GetTotalExecutionStrategyOperationFailures()
         => Interlocked.Read(ref _totalExecutionStrategyOperationFailures);
 
     /// <summary>
@@ -113,7 +125,7 @@ public static class EntityFrameworkMetricsData
     /// <summary>
     /// Cumulative number of optimistic concurrency failures.
     /// </summary>
-    public static long GetTotalOptimisticConcurrencyFailures()
+    internal static long GetTotalOptimisticConcurrencyFailures()
         => Interlocked.Read(ref _totalOptimisticConcurrencyFailures);
 
     [StructLayout(LayoutKind.Explicit)]

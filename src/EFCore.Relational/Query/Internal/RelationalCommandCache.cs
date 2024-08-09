@@ -3,6 +3,7 @@
 
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Microsoft.EntityFrameworkCore.Query.Internal;
@@ -103,16 +104,11 @@ public class RelationalCommandCache : IPrintableExpression
         }
     }
 
-    private readonly struct CommandCacheKey : IEquatable<CommandCacheKey>
+    private readonly struct CommandCacheKey(Expression queryExpression, IReadOnlyDictionary<string, object?> parameterValues)
+        : IEquatable<CommandCacheKey>
     {
-        private readonly Expression _queryExpression;
-        private readonly IReadOnlyDictionary<string, object?> _parameterValues;
-
-        public CommandCacheKey(Expression queryExpression, IReadOnlyDictionary<string, object?> parameterValues)
-        {
-            _queryExpression = queryExpression;
-            _parameterValues = parameterValues;
-        }
+        private readonly Expression _queryExpression = queryExpression;
+        private readonly IReadOnlyDictionary<string, object?> _parameterValues = parameterValues;
 
         public override bool Equals(object? obj)
             => obj is CommandCacheKey commandCacheKey
@@ -154,6 +150,6 @@ public class RelationalCommandCache : IPrintableExpression
         }
 
         public override int GetHashCode()
-            => 0;
+            => RuntimeHelpers.GetHashCode(_queryExpression);
     }
 }

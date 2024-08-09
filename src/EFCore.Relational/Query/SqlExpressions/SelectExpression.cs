@@ -111,10 +111,10 @@ public sealed partial class SelectExpression : TableExpressionBase
         IReadOnlyList<OrderingExpression> orderings,
         SqlExpression? offset,
         SqlExpression? limit,
-        IReadOnlySet<string> tags,
-        IReadOnlyDictionary<string, IAnnotation>? annotations)
+        IReadOnlySet<string>? tags = null,
+        IReadOnlyDictionary<string, IAnnotation>? annotations = null)
         : this(alias, tables.ToList(), predicate, groupBy.ToList(), having, projections.ToList(), distinct, orderings.ToList(),
-            offset, limit, tags.ToHashSet(), annotations, sqlAliasManager: null, isMutable: false)
+            offset, limit, tags?.ToHashSet() ?? [], annotations, sqlAliasManager: null, isMutable: false)
     {
     }
 
@@ -189,7 +189,7 @@ public sealed partial class SelectExpression : TableExpressionBase
     /// <summary>
     ///     A bool value indicating if DISTINCT is applied to projection of this <see cref="SelectExpression" />.
     /// </summary>
-    public bool IsDistinct { get; private set; }
+    public bool IsDistinct { get; set; }
 
     /// <summary>
     ///     The list of expressions being projected out from the result set.
@@ -2006,6 +2006,12 @@ public sealed partial class SelectExpression : TableExpressionBase
             select2.ClearOrdering();
         }
 
+        if (distinct)
+        {
+            select1.IsDistinct = false;
+            select2.IsDistinct = false;
+        }
+
         if (_clientProjections.Count > 0
             || select2._clientProjections.Count > 0)
         {
@@ -3508,21 +3514,25 @@ public sealed partial class SelectExpression : TableExpressionBase
                     break;
                 }
 
-                if (expression is StructuralTypeProjectionExpression projection)
+                switch (expression)
                 {
-                    _projectionMapping[projectionMember] = LiftEntityProjectionFromSubquery(projection, subqueryAlias);
-                }
-                else if (expression is JsonQueryExpression jsonQueryExpression)
-                {
-                    _projectionMapping[projectionMember] = LiftJsonQueryFromSubquery(jsonQueryExpression);
-                }
-                else
-                {
-                    var innerColumn = (SqlExpression)expression;
-                    var outerColumn = subquery.GenerateOuterColumn(
-                        subqueryAlias, innerColumn, projectionMember.Last?.Name);
-                    projectionMap[innerColumn] = outerColumn;
-                    _projectionMapping[projectionMember] = outerColumn;
+                    case StructuralTypeProjectionExpression projection:
+                        _projectionMapping[projectionMember] = LiftEntityProjectionFromSubquery(projection, subqueryAlias);
+                        break;
+
+                    case JsonQueryExpression jsonQueryExpression:
+                        _projectionMapping[projectionMember] = LiftJsonQueryFromSubquery(jsonQueryExpression);
+                        break;
+
+                    case SqlExpression innerColumn:
+                        var outerColumn = subquery.GenerateOuterColumn(subqueryAlias, innerColumn, projectionMember.Last?.Name);
+                        projectionMap[innerColumn] = outerColumn;
+                        _projectionMapping[projectionMember] = outerColumn;
+                        break;
+
+                    default:
+                        throw new UnreachableException(
+                            $"Unknown expression type '{expression.GetType().Name}' in projection mapping when pushing down");
                 }
             }
         }

@@ -19,14 +19,9 @@ namespace Microsoft.EntityFrameworkCore.Query;
 #nullable disable
 
 // ReSharper disable once UnusedTypeParameter
-public abstract class NorthwindFunctionsQueryTestBase<TFixture> : QueryTestBase<TFixture>
+public abstract class NorthwindFunctionsQueryTestBase<TFixture>(TFixture fixture) : QueryTestBase<TFixture>(fixture)
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
-    protected NorthwindFunctionsQueryTestBase(TFixture fixture)
-        : base(fixture)
-    {
-    }
-
     protected NorthwindContext CreateContext()
         => Fixture.CreateContext();
 
@@ -220,7 +215,7 @@ public abstract class NorthwindFunctionsQueryTestBase<TFixture> : QueryTestBase<
     public virtual Task String_Contains_Column(bool async)
         => AssertQuery(
             async,
-            ss => ss.Set<Customer>().Where(c => c.ContactName.Contains(c.ContactName)));
+            ss => ss.Set<Customer>().Where(c => c.CompanyName.Contains(c.ContactName)));
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]

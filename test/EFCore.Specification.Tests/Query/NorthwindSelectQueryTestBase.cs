@@ -10,14 +10,9 @@ namespace Microsoft.EntityFrameworkCore.Query;
 
 #nullable disable
 
-public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFixture>
+public abstract class NorthwindSelectQueryTestBase<TFixture>(TFixture fixture) : QueryTestBase<TFixture>(fixture)
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
-    protected NorthwindSelectQueryTestBase(TFixture fixture)
-        : base(fixture)
-    {
-    }
-
     protected NorthwindContext CreateContext()
         => Fixture.CreateContext();
 
@@ -765,6 +760,52 @@ public abstract class NorthwindSelectQueryTestBase<TFixture> : QueryTestBase<TFi
                                                               : c.CustomerID == "11"
                                                                   ? "11"
                                                                   : null);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Select_conditional_drops_false(bool async)
+        => AssertQueryScalar(
+            async,
+            ss => from o in ss.Set<Order>()
+                  select o.OrderID % 2 == 0
+                      ? o.OrderID
+                      : false
+                          ? 0
+                          : -o.OrderID );
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Select_conditional_terminates_at_true(bool async)
+        => AssertQueryScalar(
+            async,
+            ss => from o in ss.Set<Order>()
+                  select o.OrderID % 2 == 0
+                      ? o.OrderID
+                      : true
+                          ? 0
+                          : -o.OrderID );
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Select_conditional_flatten_nested_results(bool async)
+        => AssertQueryScalar(
+            async,
+            ss => from o in ss.Set<Order>()
+                  select o.OrderID % 2 == 0
+                      ? o.OrderID % 5 == 0
+                          ? -o.OrderID
+                          : o.OrderID
+                      : o.OrderID);
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Select_conditional_flatten_nested_tests(bool async)
+        => AssertQueryScalar(
+            async,
+            ss => from o in ss.Set<Order>()
+                  select (o.OrderID % 2 == 0 ? false : true)
+                      ? o.OrderID
+                      : -o.OrderID);
 
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]

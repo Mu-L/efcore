@@ -328,7 +328,9 @@ namespace System.Runtime.CompilerServices
         // First, check whether this is an async query.
         var async = terminatingOperator.Type.IsGenericType
             && terminatingOperator.Type.GetGenericTypeDefinition() is var genericDefinition
-            && (genericDefinition == typeof(Task<>) || genericDefinition == typeof(ValueTask<>));
+            && (genericDefinition == typeof(Task<>)
+                || genericDefinition == typeof(ValueTask<>)
+                || genericDefinition == typeof(IAsyncEnumerable<>));
 
         var preparedQuery = PrepareQueryForCompilation(penultimateOperator, terminatingOperator);
 
@@ -1064,10 +1066,10 @@ namespace System.Runtime.CompilerServices
                         method.GetParameters()[1].ParameterType.GenericTypeArguments[0].GenericTypeArguments[1])),
 
             // ExecuteDelete/Update behave just like other scalar-returning operators
-            nameof(RelationalQueryableExtensions.ExecuteDeleteAsync) when method.DeclaringType == typeof(RelationalQueryableExtensions)
-                => RewriteToSync(typeof(RelationalQueryableExtensions).GetMethod(nameof(RelationalQueryableExtensions.ExecuteDelete))),
-            nameof(RelationalQueryableExtensions.ExecuteUpdateAsync) when method.DeclaringType == typeof(RelationalQueryableExtensions)
-                => RewriteToSync(typeof(RelationalQueryableExtensions).GetMethod(nameof(RelationalQueryableExtensions.ExecuteUpdate))),
+            nameof(EntityFrameworkQueryableExtensions.ExecuteDeleteAsync) when method.DeclaringType == typeof(EntityFrameworkQueryableExtensions)
+                => RewriteToSync(typeof(EntityFrameworkQueryableExtensions).GetMethod(nameof(EntityFrameworkQueryableExtensions.ExecuteDelete))),
+            nameof(EntityFrameworkQueryableExtensions.ExecuteUpdateAsync) when method.DeclaringType == typeof(EntityFrameworkQueryableExtensions)
+                => RewriteToSync(typeof(EntityFrameworkQueryableExtensions).GetMethod(nameof(EntityFrameworkQueryableExtensions.ExecuteUpdate))),
 
             // In the regular case (sync terminating operator which needs to stay in the query tree), simply compose the terminating
             // operator over the penultimate and return that.

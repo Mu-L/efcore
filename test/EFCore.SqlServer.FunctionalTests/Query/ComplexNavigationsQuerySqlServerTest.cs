@@ -2068,7 +2068,7 @@ SELECT [l].[Id], [l].[Date], [l].[Name], [l].[OneToMany_Optional_Self_Inverse1Id
 FROM [LevelOne] AS [l]
 LEFT JOIN [LevelTwo] AS [l0] ON [l].[Id] = [l0].[Level1_Optional_Id]
 WHERE 5 IN (
-    SELECT DISTINCT CAST(LEN([l1].[Name]) AS int)
+    SELECT CAST(LEN([l1].[Name]) AS int)
     FROM [LevelThree] AS [l1]
     WHERE [l0].[Id] IS NOT NULL AND [l0].[Id] = [l1].[OneToMany_Optional_Inverse3Id]
 )
@@ -2487,12 +2487,15 @@ INNER JOIN [LevelTwo] AS [l0] ON [l].[Id] = [l0].[Level1_Optional_Id]
             """
 SELECT [l].[Id]
 FROM [LevelOne] AS [l]
-OUTER APPLY (
-    SELECT TOP(10) 1 AS empty
-    FROM [LevelTwo] AS [l0]
-    WHERE [l].[Id] = [l0].[Level1_Optional_Id] AND [l0].[Id] > 0
-    ORDER BY [l0].[Id]
-) AS [l1]
+LEFT JOIN (
+    SELECT [l1].[Level1_Optional_Id]
+    FROM (
+        SELECT [l0].[Level1_Optional_Id], ROW_NUMBER() OVER(PARTITION BY [l0].[Level1_Optional_Id] ORDER BY [l0].[Id]) AS [row]
+        FROM [LevelTwo] AS [l0]
+        WHERE [l0].[Id] > 0
+    ) AS [l1]
+    WHERE [l1].[row] <= 10
+) AS [l2] ON [l].[Id] = [l2].[Level1_Optional_Id]
 """);
     }
 
@@ -2504,12 +2507,15 @@ OUTER APPLY (
             """
 SELECT [l].[Id]
 FROM [LevelOne] AS [l]
-CROSS APPLY (
-    SELECT TOP(10) 1 AS empty
-    FROM [LevelTwo] AS [l0]
-    WHERE [l].[Id] = [l0].[Level1_Optional_Id] AND [l0].[Id] > 0
-    ORDER BY [l0].[Id]
-) AS [l1]
+INNER JOIN (
+    SELECT [l1].[Level1_Optional_Id]
+    FROM (
+        SELECT [l0].[Level1_Optional_Id], ROW_NUMBER() OVER(PARTITION BY [l0].[Level1_Optional_Id] ORDER BY [l0].[Id]) AS [row]
+        FROM [LevelTwo] AS [l0]
+        WHERE [l0].[Id] > 0
+    ) AS [l1]
+    WHERE [l1].[row] <= 10
+) AS [l2] ON [l].[Id] = [l2].[Level1_Optional_Id]
 """);
     }
 
@@ -3116,14 +3122,13 @@ ORDER BY [i].[Id], [i0].[Id], [i1].[Id], [i2].[Id], [s].[Id], [s].[Id0]
 """);
     }
 
-    [SqlServerCondition(SqlServerCondition.SupportsFunctions2022)]
     public override async Task Nav_rewrite_doesnt_apply_null_protection_for_function_arguments(bool async)
     {
         await base.Nav_rewrite_doesnt_apply_null_protection_for_function_arguments(async);
 
         AssertSql(
             """
-SELECT GREATEST([l0].[Level1_Required_Id], 7)
+SELECT [l0].[Level1_Required_Id]
 FROM [LevelOne] AS [l]
 LEFT JOIN [LevelTwo] AS [l0] ON [l].[Id] = [l0].[OneToOne_Optional_PK_Inverse2Id]
 WHERE [l0].[Id] IS NOT NULL
@@ -3536,7 +3541,7 @@ SELECT CASE
     WHEN NOT EXISTS (
         SELECT 1
         FROM [LevelOne] AS [l]
-        WHERE [l].[Name] = N'Foo' AND [l].[Name] IS NOT NULL) THEN CAST(1 AS bit)
+        WHERE [l].[Name] = N'Foo') THEN CAST(1 AS bit)
     ELSE CAST(0 AS bit)
 END
 """);

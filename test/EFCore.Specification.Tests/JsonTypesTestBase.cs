@@ -3,7 +3,6 @@
 
 using System.Collections;
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -3713,7 +3712,6 @@ public abstract class JsonTypesTestBase : NonSharedModelTestBase
         public List<List<List<int>>> Prop { get; set; } = null!;
     }
 
-
     [ConditionalFact]
     public virtual Task Can_read_write_array_of_array_of_array_of_int_JSON_values()
         => Can_read_and_write_JSON_value<Int32ArrayArrayArrayType, int[][][]>(
@@ -4056,13 +4054,7 @@ public abstract class JsonTypesTestBase : NonSharedModelTestBase
         public int Id { get; init; }
     }
 
-    protected class DddIdConverter : ValueConverter<DddId, int>
-    {
-        public DddIdConverter()
-            : base(v => v.Id, v => new DddId { Id = v })
-        {
-        }
-    }
+    protected class DddIdConverter() : ValueConverter<DddId, int>(v => v.Id, v => new DddId { Id = v });
 
     public enum Enum8 : sbyte
     {
@@ -4128,28 +4120,16 @@ public abstract class JsonTypesTestBase : NonSharedModelTestBase
         Max = ulong.MaxValue
     }
 
-    public class CustomCollectionConverter<T, TElement> : ValueConverter<T, string>
-        where T : class, IList<TElement>
-    {
-        public CustomCollectionConverter()
-            : base(
-                v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
-                v => JsonSerializer.Deserialize<T>(v, (JsonSerializerOptions?)null)!)
-        {
-        }
-    }
+    public class CustomCollectionConverter<T, TElement>() : ValueConverter<T, string>(
+        v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+        v => JsonSerializer.Deserialize<T>(v, (JsonSerializerOptions?)null)!)
+        where T : class, IList<TElement>;
 
-    public class CustomCollectionComparer<T, TElement> : ValueComparer<T>
-        where T : class, IList<TElement>
-    {
-        public CustomCollectionComparer()
-            : base(
-                (c1, c2) => c1!.SequenceEqual(c2!),
-                c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v!.GetHashCode())),
-                c => (T)(object)c.ToList())
-        {
-        }
-    }
+    public class CustomCollectionComparer<T, TElement>() : ValueComparer<T>(
+        (c1, c2) => c1!.SequenceEqual(c2!),
+        c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v!.GetHashCode())),
+        c => (T)(object)c.ToList())
+        where T : class, IList<TElement>;
 
     public sealed class JsonGeoJsonReaderWriter : JsonValueReaderWriter<Geometry>
     {

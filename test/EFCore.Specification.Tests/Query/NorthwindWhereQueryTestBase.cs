@@ -11,14 +11,9 @@ namespace Microsoft.EntityFrameworkCore.Query;
 // ReSharper disable RedundantBoolCompare
 // ReSharper disable InconsistentNaming
 
-public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFixture>
+public abstract class NorthwindWhereQueryTestBase<TFixture>(TFixture fixture) : QueryTestBase<TFixture>(fixture)
     where TFixture : NorthwindQueryFixtureBase<NoopModelCustomizer>, new()
 {
-    protected NorthwindWhereQueryTestBase(TFixture fixture)
-        : base(fixture)
-    {
-    }
-
     protected NorthwindContext CreateContext()
         => Fixture.CreateContext();
 
@@ -2065,9 +2060,7 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Multiple_AndAlso_on_same_column_converted_to_in_using_parameters(bool async)
     {
-        var prm1 = "ALFKI";
-        var prm2 = "ANATR";
-        var prm3 = "ANTON";
+        var (prm1, prm2, prm3) = ("ALFKI", "ANATR", "ANTON");
 
         return AssertQuery(
             async,
@@ -2078,8 +2071,7 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Array_of_parameters_Contains_OrElse_comparison_with_constant_gets_combined_to_one_in(bool async)
     {
-        var prm1 = "ALFKI";
-        var prm2 = "ANATR";
+        var (prm1, prm2) = ("ALFKI", "ANATR");
 
         return AssertQuery(
             async,
@@ -2547,4 +2539,29 @@ public abstract class NorthwindWhereQueryTestBase<TFixture> : QueryTestBase<TFix
             ss => ss.Set<Order>().Select(x => new DtoWithInterface { Id = x.OrderID }).Where(x => (x as IHaveId).Id == 10252),
             elementAsserter: (e, a) => AssertEqual(e.Id, a.Id));
     }
+
+    #region Evaluation order of predicates
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Take_and_Where_evaluation_order(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Employee>().OrderBy(e => e.EmployeeID).Take(3).Where(e => e.EmployeeID % 2 == 0));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Skip_and_Where_evaluation_order(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Employee>().OrderBy(e => e.EmployeeID).Skip(3).Where(e => e.EmployeeID % 2 == 0));
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual Task Take_and_Distinct_evaluation_order(bool async)
+        => AssertQuery(
+            async,
+            ss => ss.Set<Customer>().Select(c => c.ContactTitle).OrderBy(t => t).Take(3).Distinct());
+
+    #endregion Evaluation order of predicates
 }

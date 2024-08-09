@@ -21,7 +21,7 @@ public class SqlServerSqlTranslatingExpressionVisitor : RelationalSqlTranslating
     private readonly SqlServerQueryCompilationContext _queryCompilationContext;
     private readonly ISqlExpressionFactory _sqlExpressionFactory;
     private readonly IRelationalTypeMappingSource _typeMappingSource;
-    private readonly int _sqlServerCompatibilityLevel;
+    private readonly ISqlServerSingletonOptions _sqlServerSingletonOptions;
 
     private static readonly HashSet<string> DateTimeDataTypes
         =
@@ -87,7 +87,7 @@ public class SqlServerSqlTranslatingExpressionVisitor : RelationalSqlTranslating
         _queryCompilationContext = queryCompilationContext;
         _sqlExpressionFactory = dependencies.SqlExpressionFactory;
         _typeMappingSource = dependencies.TypeMappingSource;
-        _sqlServerCompatibilityLevel = sqlServerSingletonOptions.CompatibilityLevel;
+        _sqlServerSingletonOptions = sqlServerSingletonOptions;
     }
 
     /// <summary>
@@ -211,7 +211,9 @@ public class SqlServerSqlTranslatingExpressionVisitor : RelationalSqlTranslating
         // Translate non-aggregate string.Join to CONCAT_WS (for aggregate string.Join, see SqlServerStringAggregateMethodTranslator)
         if (method == StringJoinMethodInfo
             && methodCallExpression.Arguments[1] is NewArrayExpression newArrayExpression
-            && _sqlServerCompatibilityLevel >= 140)
+            && ((_sqlServerSingletonOptions.EngineType == SqlServerEngineType.SqlServer && _sqlServerSingletonOptions.SqlServerCompatibilityLevel >= 140)
+                || (_sqlServerSingletonOptions.EngineType == SqlServerEngineType.AzureSql && _sqlServerSingletonOptions.AzureSqlCompatibilityLevel >= 140)
+                || (_sqlServerSingletonOptions.EngineType == SqlServerEngineType.AzureSynapse)))
         {
             if (TranslationFailed(methodCallExpression.Arguments[0], Visit(methodCallExpression.Arguments[0]), out var delimiter))
             {
@@ -530,20 +532,54 @@ public class SqlServerSqlTranslatingExpressionVisitor : RelationalSqlTranslating
     ///     any release. You should only use it directly in your code with extreme caution and knowing that
     ///     doing so can result in application failures when updating to a new Entity Framework Core release.
     /// </summary>
-    protected override bool TryTranslateAggregateMethodCall(
-        MethodCallExpression methodCallExpression,
-        [NotNullWhen(true)] out SqlExpression? translation)
+    public override SqlExpression? GenerateGreatest(IReadOnlyList<SqlExpression> expressions, Type resultType)
     {
-        var previousInAggregateFunction = _queryCompilationContext.InAggregateFunction;
-        _queryCompilationContext.InAggregateFunction = true;
+        // Docs: https://learn.microsoft.com/sql/t-sql/functions/logical-functions-greatest-transact-sql
+        if (_sqlServerSingletonOptions.EngineType == SqlServerEngineType.SqlServer
+            && _sqlServerSingletonOptions.SqlServerCompatibilityLevel < 160)
+        {
+            return null;
+        }
+        if (_sqlServerSingletonOptions.EngineType == SqlServerEngineType.AzureSql
+            && _sqlServerSingletonOptions.AzureSqlCompatibilityLevel < 160)
+        {
+            return null;
+        }
 
-#pragma warning disable EF1001 // Internal EF Core API usage.
-        var result = base.TryTranslateAggregateMethodCall(methodCallExpression, out translation);
-#pragma warning restore EF1001 // Internal EF Core API usage.
+        var resultTypeMapping = ExpressionExtensions.InferTypeMapping(expressions);
 
-        _queryCompilationContext.InAggregateFunction = previousInAggregateFunction;
+        // If one or more arguments aren't NULL, then NULL arguments are ignored during comparison.
+        // If all arguments are NULL, then GREATEST returns NULL.
+        return _sqlExpressionFactory.Function(
+            "GREATEST", expressions, nullable: true, Enumerable.Repeat(false, expressions.Count), resultType, resultTypeMapping);
+    }
 
-        return result;
+    /// <summary>
+    ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
+    ///     the same compatibility standards as public APIs. It may be changed or removed without notice in
+    ///     any release. You should only use it directly in your code with extreme caution and knowing that
+    ///     doing so can result in application failures when updating to a new Entity Framework Core release.
+    /// </summary>
+    public override SqlExpression? GenerateLeast(IReadOnlyList<SqlExpression> expressions, Type resultType)
+    {
+        // Docs: https://learn.microsoft.com/sql/t-sql/functions/logical-functions-least-transact-sql
+        if (_sqlServerSingletonOptions.EngineType == SqlServerEngineType.SqlServer
+            && _sqlServerSingletonOptions.SqlServerCompatibilityLevel < 160)
+        {
+            return null;
+        }
+        if (_sqlServerSingletonOptions.EngineType == SqlServerEngineType.AzureSql
+            && _sqlServerSingletonOptions.AzureSqlCompatibilityLevel < 160)
+        {
+            return null;
+        }
+
+        var resultTypeMapping = ExpressionExtensions.InferTypeMapping(expressions);
+
+        // If one or more arguments aren't NULL, then NULL arguments are ignored during comparison.
+        // If all arguments are NULL, then LEAST returns NULL.
+        return _sqlExpressionFactory.Function(
+            "LEAST", expressions, nullable: true, Enumerable.Repeat(false, expressions.Count), resultType, resultTypeMapping);
     }
 
     private Expression TranslateByteArrayElementAccess(Expression array, Expression index, Type resultType)

@@ -74,9 +74,9 @@ public class CustomConvertersCosmosTest : CustomConvertersTestBase<CustomConvert
 
         AssertSql(
             """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND (c["IsVisible"] = "Y"))
+WHERE (c["$type"] IN ("Blog", "RssBlog") AND (c["IsVisible"] = "Y"))
 """);
     }
 
@@ -87,9 +87,9 @@ WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND (c["IsVisible"] = "Y"))
 
         AssertSql(
             """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND NOT((c["IsVisible"] = "Y")))
+WHERE (c["$type"] IN ("Blog", "RssBlog") AND NOT((c["IsVisible"] = "Y")))
 """);
     }
 
@@ -100,9 +100,9 @@ WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND NOT((c["IsVisible"] = "Y"))
 
         AssertSql(
             """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND (c["IsVisible"] = "Y"))
+WHERE (c["$type"] IN ("Blog", "RssBlog") AND (c["IsVisible"] = "Y"))
 """);
     }
 
@@ -113,9 +113,9 @@ WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND (c["IsVisible"] = "Y"))
 
         AssertSql(
             """
-SELECT c
+SELECT VALUE c
 FROM root c
-WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND NOT((c["IndexerVisible"] = "Aye")))
+WHERE (c["$type"] IN ("Blog", "RssBlog") AND NOT((c["IndexerVisible"] = "Aye")))
 """);
     }
 
@@ -184,12 +184,17 @@ WHERE (c["Discriminator"] IN ("Blog", "RssBlog") AND NOT((c["IndexerVisible"] = 
         {
             base.OnModelCreating(modelBuilder, context);
 
+            modelBuilder.IncludeDiscriminatorInJsonId();
+
             var shadowJObject = (Property)modelBuilder.Entity<BuiltInDataTypesShadow>().Property("__jObject").Metadata;
             shadowJObject.SetConfigurationSource(ConfigurationSource.Convention);
             var nullableShadowJObject = (Property)modelBuilder.Entity<BuiltInNullableDataTypesShadow>().Property("__jObject").Metadata;
             nullableShadowJObject.SetConfigurationSource(ConfigurationSource.Convention);
 
             modelBuilder.Entity<SimpleCounter>(b => b.ToContainer("SimpleCounters"));
+
+            modelBuilder.Entity<Person>().Metadata.RemoveIndex(
+                modelBuilder.Entity<Person>().Property(e => e.SSN).Metadata.GetContainingIndexes().Single());
         }
     }
 }

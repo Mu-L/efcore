@@ -3,14 +3,9 @@
 
 namespace Microsoft.EntityFrameworkCore.Query;
 
-public abstract class PrimitiveCollectionsQueryTestBase<TFixture> : QueryTestBase<TFixture>
+public abstract class PrimitiveCollectionsQueryTestBase<TFixture>(TFixture fixture) : QueryTestBase<TFixture>(fixture)
     where TFixture : PrimitiveCollectionsQueryTestBase<TFixture>.PrimitiveCollectionsQueryFixtureBase, new()
 {
-    protected PrimitiveCollectionsQueryTestBase(TFixture fixture)
-        : base(fixture)
-    {
-    }
-
     [ConditionalTheory]
     [MemberData(nameof(IsAsyncData))]
     public virtual Task Inline_collection_of_ints_Contains(bool async)
@@ -234,6 +229,50 @@ public abstract class PrimitiveCollectionsQueryTestBase<TFixture> : QueryTestBas
         await AssertQuery(
             async,
             ss => ss.Set<PrimitiveCollectionsEntity>().Where(c => new List<int> { 30, c.Int, i }.Max() == 35));
+    }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Inline_collection_of_nullable_value_type_Min(bool async)
+    {
+        int? i = 25;
+
+        await AssertQuery(
+            async,
+            ss => ss.Set<PrimitiveCollectionsEntity>().Where(c => new[] { 30, c.Int, i }.Min() == 25));
+    }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Inline_collection_of_nullable_value_type_Max(bool async)
+    {
+        int? i = 35;
+
+        await AssertQuery(
+            async,
+            ss => ss.Set<PrimitiveCollectionsEntity>().Where(c => new[] { 30, c.Int, i }.Max() == 35));
+    }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Inline_collection_of_nullable_value_type_with_null_Min(bool async)
+    {
+        int? i = null;
+
+        await AssertQuery(
+            async,
+            ss => ss.Set<PrimitiveCollectionsEntity>().Where(c => new[] { 30, c.NullableInt, i }.Min() == 30));
+    }
+
+    [ConditionalTheory]
+    [MemberData(nameof(IsAsyncData))]
+    public virtual async Task Inline_collection_of_nullable_value_type_with_null_Max(bool async)
+    {
+        int? i = null;
+
+        await AssertQuery(
+            async,
+            ss => ss.Set<PrimitiveCollectionsEntity>().Where(c => new[] { 30, c.NullableInt, i }.Max() == 30));
     }
 
     [ConditionalTheory]
@@ -1209,7 +1248,7 @@ public abstract class PrimitiveCollectionsQueryTestBase<TFixture> : QueryTestBas
 
     public abstract class PrimitiveCollectionsQueryFixtureBase : SharedStoreFixtureBase<PrimitiveCollectionsContext>, IQueryFixtureBase
     {
-        private PrimitiveArrayData? _expectedData;
+        private PrimitiveCollectionsData? _expectedData;
 
         protected override string StoreName
             => "PrimitiveCollectionsTest";
@@ -1222,12 +1261,12 @@ public abstract class PrimitiveCollectionsQueryTestBase<TFixture> : QueryTestBas
 
         protected override Task SeedAsync(PrimitiveCollectionsContext context)
         {
-            context.AddRange(new PrimitiveArrayData().PrimitiveArrayEntities);
+            context.AddRange(new PrimitiveCollectionsData().PrimitiveArrayEntities);
             return context.SaveChangesAsync();
         }
 
         public virtual ISetSource GetExpectedData()
-            => _expectedData ??= new PrimitiveArrayData();
+            => _expectedData ??= new PrimitiveCollectionsData();
 
         public IReadOnlyDictionary<Type, object> EntitySorters { get; } = new Dictionary<Type, Func<object?, object?>>
         {
@@ -1283,11 +1322,11 @@ public abstract class PrimitiveCollectionsQueryTestBase<TFixture> : QueryTestBas
 
     public enum MyEnum { Value1, Value2, Value3, Value4 }
 
-    public class PrimitiveArrayData : ISetSource
+    public class PrimitiveCollectionsData : ISetSource
     {
         public IReadOnlyList<PrimitiveCollectionsEntity> PrimitiveArrayEntities { get; }
 
-        public PrimitiveArrayData(PrimitiveCollectionsContext? context = null)
+        public PrimitiveCollectionsData(PrimitiveCollectionsContext? context = null)
         {
             PrimitiveArrayEntities = CreatePrimitiveArrayEntities();
         }

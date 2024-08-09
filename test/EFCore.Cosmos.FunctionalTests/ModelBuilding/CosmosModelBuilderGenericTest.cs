@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 using Microsoft.EntityFrameworkCore.Cosmos.Internal;
+using Microsoft.EntityFrameworkCore.Cosmos.Metadata.Internal;
 using Xunit.Sdk;
 
 // ReSharper disable InconsistentNaming
@@ -11,6 +12,66 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
 {
     public class CosmosGenericNonRelationship(CosmosModelBuilderFixture fixture) : NonRelationshipTestBase(fixture), IClassFixture<CosmosModelBuilderFixture>
     {
+        // Cosmos provider cannot map collections of elements with converters. See Issue #34026.
+        public override void Element_types_can_have_custom_type_value_converter_type_set()
+            => Assert.Equal(
+                CosmosStrings.ElementWithValueConverter("int[]", "CollectionQuarks", "Charm", "int"),
+                Assert.Throws<InvalidOperationException>(base.Element_types_can_have_custom_type_value_converter_type_set).Message);
+
+        // Cosmos provider cannot map collections of elements with converters. See Issue #34026.
+        public override void Element_types_can_have_non_generic_value_converter_set()
+            => Assert.Equal(
+                CosmosStrings.ElementWithValueConverter("int[]", "CollectionQuarks", "Charm", "int"),
+                Assert.Throws<InvalidOperationException>(base.Element_types_can_have_non_generic_value_converter_set).Message);
+
+        // Cosmos provider cannot map collections of elements with converters. See Issue #34026.
+        public override void Element_types_can_have_provider_type_set()
+            => Assert.Equal(
+                CosmosStrings.ElementWithValueConverter("List<int>", "CollectionQuarks", "Charm", "int"),
+                Assert.Throws<InvalidOperationException>(base.Element_types_can_have_provider_type_set).Message);
+
+        // Cosmos provider cannot map collections of elements with converters. See Issue #34026.
+        public override void Primitive_collections_can_have_value_converter_set()
+            => Assert.Equal(
+                CosmosStrings.ElementWithValueConverter("List<int>", "CollectionQuarks", "Charm", "int"),
+                Assert.Throws<InvalidOperationException>(base.Primitive_collections_can_have_value_converter_set).Message);
+
+        public override void Can_add_contained_indexes()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Customer), "Id"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_add_contained_indexes).Message);
+
+        public override void Can_add_index()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Customer), "Name"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_add_index).Message);
+
+        public override void Can_add_index_when_no_clr_property()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Customer), "Index"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_add_index_when_no_clr_property).Message);
+
+        public override void Can_add_multiple_indexes()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Customer), "Id"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_add_multiple_indexes).Message);
+
+        public override void Can_set_composite_index_on_an_entity_with_fields()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(EntityWithFields), "TenantId,CompanyId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_set_composite_index_on_an_entity_with_fields).Message);
+
+        public override void Can_set_index_on_an_entity_with_fields()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(EntityWithFields), "CompanyId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_set_index_on_an_entity_with_fields).Message);
+
         public override void Properties_can_set_row_version()
             => Assert.Equal(
                 CosmosStrings.NonETagConcurrencyToken(nameof(Quarks), "Charm"),
@@ -83,13 +144,8 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { nameof(Customer.Id), nameof(Customer.AlternateKey) },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName, nameof(Customer.AlternateKey) },
-                entity.GetKeys().First(k => k != entity.FindPrimaryKey()).Properties.Select(p => p.Name));
 
-            var idProperty = entity.FindProperty(StoreKeyConvention.DefaultIdPropertyName)!;
-            Assert.Single(idProperty.GetContainingKeys());
-            Assert.NotNull(idProperty.GetValueGeneratorFactory());
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -109,13 +165,8 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { nameof(Customer.Title), nameof(Customer.Name) },
                 entity.GetPartitionKeyProperties().Select(p => p.Name));
-            Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName, nameof(Customer.Title), nameof(Customer.Name) },
-                entity.GetKeys().First(k => k != entity.FindPrimaryKey()).Properties.Select(p => p.Name));
 
-            var idProperty = entity.FindProperty(StoreKeyConvention.DefaultIdPropertyName)!;
-            Assert.Single(idProperty.GetContainingKeys());
-            Assert.NotNull(idProperty.GetValueGeneratorFactory());
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -136,13 +187,8 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { nameof(Customer.Title), nameof(Customer.Name), nameof(Customer.AlternateKey) },
                 entity.GetPartitionKeyProperties().Select(p => p.Name));
-            Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName, nameof(Customer.Title), nameof(Customer.Name), nameof(Customer.AlternateKey) },
-                entity.GetKeys().First(k => k != entity.FindPrimaryKey()).Properties.Select(p => p.Name));
 
-            var idProperty = entity.FindProperty(StoreKeyConvention.DefaultIdPropertyName)!;
-            Assert.Single(idProperty.GetContainingKeys());
-            Assert.NotNull(idProperty.GetValueGeneratorFactory());
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -150,23 +196,26 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
-            modelBuilder.Entity<Customer>().HasKey(StoreKeyConvention.DefaultIdPropertyName);
-            modelBuilder.Entity<Customer>()
-                .Ignore(b => b.Details)
-                .Ignore(b => b.Orders)
-                .HasPartitionKey(b => b.AlternateKey)
-                .Property(b => b.AlternateKey).HasConversion<string>();
+            modelBuilder.Entity<Customer>(
+                b =>
+                {
+                    b.HasAnnotation(CosmosAnnotationNames.AlwaysCreateShadowIdProperty, true);
+                    b.HasKey(CosmosJsonIdConvention.DefaultIdPropertyName);
+
+                    b.Ignore(b => b.Details)
+                        .Ignore(b => b.Orders)
+                        .HasPartitionKey(b => b.AlternateKey)
+                        .Property(b => b.AlternateKey).HasConversion<string>();
+                });
 
             var model = modelBuilder.FinalizeModel();
-
             var entity = model.FindEntityType(typeof(Customer))!;
 
             Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName },
+                new[] { CosmosJsonIdConvention.DefaultIdPropertyName },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName, nameof(Customer.AlternateKey) },
-                entity.GetKeys().First(k => k != entity.FindPrimaryKey()).Properties.Select(p => p.Name));
+
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -174,7 +223,9 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
-            modelBuilder.Entity<Customer>().HasKey(StoreKeyConvention.DefaultIdPropertyName);
+            modelBuilder.Entity<Customer>().AlwaysCreateShadowIdProperty();
+            modelBuilder.Entity<Customer>().HasKey(CosmosJsonIdConvention.DefaultIdPropertyName);
+
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
                 .Ignore(b => b.Orders)
@@ -195,17 +246,8 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
                 new[] { nameof(Customer.AlternateKey), nameof(Customer.Name), nameof(Customer.Title) },
                 entity.GetPartitionKeyProperties().Select(p => p.Name));
             Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName },
+                new[] { CosmosJsonIdConvention.DefaultIdPropertyName },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Equal(
-                new[]
-                {
-                    StoreKeyConvention.DefaultIdPropertyName,
-                    nameof(Customer.AlternateKey),
-                    nameof(Customer.Name),
-                    nameof(Customer.Title)
-                },
-                entity.GetKeys().First(k => k != entity.FindPrimaryKey()).Properties.Select(p => p.Name));
         }
 
         [ConditionalFact]
@@ -215,7 +257,7 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
 
             modelBuilder.Entity<Customer>()
                 .Property(c => c.Name)
-                .ToJsonProperty(StoreKeyConvention.IdPropertyJsonName);
+                .ToJsonProperty(CosmosJsonIdConvention.IdPropertyJsonName);
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
                 .Ignore(b => b.Orders);
@@ -224,13 +266,9 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
 
             var entity = model.FindEntityType(typeof(Customer))!;
 
-            Assert.Null(entity.FindProperty(StoreKeyConvention.DefaultIdPropertyName));
-            Assert.Single(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.Null(entity.FindProperty(CosmosJsonIdConvention.DefaultIdPropertyName));
 
-            var idProperty = entity.GetDeclaredProperties()
-                .Single(p => p.GetJsonPropertyName() == StoreKeyConvention.IdPropertyJsonName);
-            Assert.Single(idProperty.GetContainingKeys());
-            Assert.NotNull(idProperty.GetValueGeneratorFactory());
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -240,7 +278,7 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
 
             modelBuilder.Entity<Customer>()
                 .Property(c => c.Name)
-                .ToJsonProperty(StoreKeyConvention.IdPropertyJsonName);
+                .ToJsonProperty(CosmosJsonIdConvention.IdPropertyJsonName);
             modelBuilder.Entity<Customer>()
                 .Ignore(c => c.Details)
                 .Ignore(c => c.Orders)
@@ -250,13 +288,15 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
 
             var entity = model.FindEntityType(typeof(Customer))!;
 
-            Assert.Null(entity.FindProperty(StoreKeyConvention.DefaultIdPropertyName));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.Null(entity.FindProperty(CosmosJsonIdConvention.DefaultIdPropertyName));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
 
             var idProperty = entity.GetDeclaredProperties()
-                .Single(p => p.GetJsonPropertyName() == StoreKeyConvention.IdPropertyJsonName);
+                .Single(p => p.GetJsonPropertyName() == CosmosJsonIdConvention.IdPropertyJsonName);
             Assert.Single(idProperty.GetContainingKeys());
             Assert.Null(idProperty.GetValueGeneratorFactory());
+
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -264,7 +304,9 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
-            modelBuilder.Entity<Customer>().HasKey(StoreKeyConvention.DefaultIdPropertyName);
+            modelBuilder.Entity<Customer>().AlwaysCreateShadowIdProperty();
+            modelBuilder.Entity<Customer>().HasKey(CosmosJsonIdConvention.DefaultIdPropertyName);
+
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
                 .Ignore(b => b.Orders);
@@ -274,13 +316,11 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             var entity = model.FindEntityType(typeof(Customer))!;
 
             Assert.Equal(
-                new[] { StoreKeyConvention.DefaultIdPropertyName },
+                new[] { CosmosJsonIdConvention.DefaultIdPropertyName },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
 
-            var idProperty = entity.FindProperty(StoreKeyConvention.DefaultIdPropertyName)!;
-            Assert.Single(idProperty.GetContainingKeys());
-            Assert.Null(idProperty.GetValueGeneratorFactory());
+            Assert.Equal(1, entity.GetKeys().Count());
         }
 
         [ConditionalFact]
@@ -288,7 +328,9 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
-            modelBuilder.Entity<Customer>().HasKey(nameof(Customer.AlternateKey), StoreKeyConvention.DefaultIdPropertyName);
+            modelBuilder.Entity<Customer>().AlwaysCreateShadowIdProperty();
+            modelBuilder.Entity<Customer>().HasKey(nameof(Customer.AlternateKey), CosmosJsonIdConvention.DefaultIdPropertyName);
+
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
                 .Ignore(b => b.Orders)
@@ -300,9 +342,9 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             var entity = model.FindEntityType(typeof(Customer))!;
 
             Assert.Equal(
-                new[] { nameof(Customer.AlternateKey), StoreKeyConvention.DefaultIdPropertyName },
+                new[] { nameof(Customer.AlternateKey), CosmosJsonIdConvention.DefaultIdPropertyName },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
         }
 
         [ConditionalFact]
@@ -310,11 +352,14 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
+            modelBuilder.Entity<Customer>().AlwaysCreateShadowIdProperty();
+
             modelBuilder.Entity<Customer>().HasKey(
                 nameof(Customer.AlternateKey),
                 nameof(Customer.Name),
                 nameof(Customer.Title),
-                StoreKeyConvention.DefaultIdPropertyName);
+                CosmosJsonIdConvention.DefaultIdPropertyName);
+
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
                 .Ignore(b => b.Orders)
@@ -341,10 +386,10 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
                     nameof(Customer.AlternateKey),
                     nameof(Customer.Name),
                     nameof(Customer.Title),
-                    StoreKeyConvention.DefaultIdPropertyName
+                    CosmosJsonIdConvention.DefaultIdPropertyName
                 },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
         }
 
         [ConditionalFact]
@@ -352,11 +397,14 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
+            modelBuilder.Entity<Customer>().AlwaysCreateShadowIdProperty();
+
             modelBuilder.Entity<Customer>().HasKey(
                 nameof(Customer.Title),
                 nameof(Customer.Name),
                 nameof(Customer.AlternateKey),
-                StoreKeyConvention.DefaultIdPropertyName);
+                CosmosJsonIdConvention.DefaultIdPropertyName);
+
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
                 .Ignore(b => b.Orders)
@@ -383,10 +431,10 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
                     nameof(Customer.Title),
                     nameof(Customer.Name),
                     nameof(Customer.AlternateKey),
-                    StoreKeyConvention.DefaultIdPropertyName
+                    CosmosJsonIdConvention.DefaultIdPropertyName
                 },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
         }
 
         [ConditionalFact]
@@ -394,10 +442,12 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
         {
             var modelBuilder = CreateModelBuilder();
 
+            modelBuilder.Entity<Customer>().AlwaysCreateShadowIdProperty();
+
             modelBuilder.Entity<Customer>().HasKey(
                 nameof(Customer.Title),
                 nameof(Customer.AlternateKey),
-                StoreKeyConvention.DefaultIdPropertyName);
+                CosmosJsonIdConvention.DefaultIdPropertyName);
 
             modelBuilder.Entity<Customer>()
                 .Ignore(b => b.Details)
@@ -424,19 +474,9 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
                 {
                     nameof(Customer.Title),
                     nameof(Customer.AlternateKey),
-                    StoreKeyConvention.DefaultIdPropertyName
+                    CosmosJsonIdConvention.DefaultIdPropertyName
                 },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-
-            Assert.Equal(
-                new[]
-                {
-                    StoreKeyConvention.DefaultIdPropertyName,
-                    nameof(Customer.Title),
-                    nameof(Customer.AlternateKey),
-                    nameof(Customer.Name)
-                },
-                entity.GetKeys().First(k => k != entity.FindPrimaryKey()).Properties.Select(p => p.Name));
         }
 
         [ConditionalFact]
@@ -458,7 +498,7 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { nameof(Customer.AlternateKey) },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
         }
 
         [ConditionalFact]
@@ -480,7 +520,7 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { nameof(Customer.Name), nameof(Customer.AlternateKey), nameof(Customer.Title) },
                 entity.FindPrimaryKey()!.Properties.Select(p => p.Name));
-            Assert.Empty(entity.GetKeys().Where(k => k != entity.FindPrimaryKey()));
+            Assert.DoesNotContain(entity.GetKeys(), k => k != entity.FindPrimaryKey());
         }
 
         protected override TestModelBuilder CreateModelBuilder(Action<ModelConfigurationBuilder>? configure = null)
@@ -564,6 +604,12 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
 
     public class CosmosGenericOneToMany(CosmosModelBuilderFixture fixture) : OneToManyTestBase(fixture), IClassFixture<CosmosModelBuilderFixture>
     {
+        public override void Creates_overlapping_foreign_keys_with_different_nullability()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Product), "Id,OrderId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Creates_overlapping_foreign_keys_with_different_nullability).Message);
+
         public override void Navigation_to_shared_type_is_not_discovered_by_convention()
         {
             var modelBuilder = CreateModelBuilder();
@@ -731,10 +777,6 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { "DependentId", "PrincipalId", "PartitionId1", "PartitionId2", "PartitionId3" },
                 joinType.FindPrimaryKey()!.Properties.Select(p => p.Name));
-
-            Assert.Equal(
-                new[] { "__id", "PartitionId1", "PartitionId2", "PartitionId3" },
-                joinType.GetKeys().Single(k => k != joinType.FindPrimaryKey()).Properties.Select(p => p.Name));
         }
 
         [ConditionalFact]
@@ -823,11 +865,6 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
             Assert.Equal(
                 new[] { "Id", "Id1", "PartitionId1", "PartitionId2", "PartitionId3" },
                 joinType.FindPrimaryKey()!.Properties.Select(p => p.Name));
-
-            Assert.Equal(
-                new[] { "__id", "PartitionId1", "PartitionId2", "PartitionId3" },
-                joinType.GetKeys().Single(k => k != joinType.FindPrimaryKey()).Properties.Select(p => p.Name));
-
 
             Assert.Equal(2, joinType.GetForeignKeys().Count());
             Assert.Equal(5, joinType.FindPrimaryKey()!.Properties.Count);
@@ -921,6 +958,48 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
                 "No exception was thrown",
                 Assert.Throws<ThrowsException>(base.Deriving_from_owned_type_throws).Message);
 
+        public override void Can_configure_one_to_many_owned_type_with_fields()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(OneToManyOwnedWithField), "OneToManyOwnerId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_configure_one_to_many_owned_type_with_fields).Message);
+
+        public override void Can_configure_one_to_one_owned_type_with_fields()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(OneToOneOwnedWithField), "OneToOneOwnerId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_configure_one_to_one_owned_type_with_fields).Message);
+
+        public override void Can_configure_owned_type()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(CustomerDetails), "CustomerId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_configure_owned_type).Message);
+
+        public override void Can_configure_owned_type_collection()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Order), "foo"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_configure_owned_type_collection).Message);
+
+        public override void Can_configure_owned_type_collection_using_nested_closure()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist(nameof(Order), "AnotherCustomerId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_configure_owned_type_collection_using_nested_closure).Message);
+
+        public override void Can_configure_chained_ownerships()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist("Book.Label#BookLabel.AnotherBookLabel#AnotherBookLabel.SpecialBookLabel#SpecialBookLabel", "BookId"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Can_configure_chained_ownerships).Message);
+
+        public override void Shared_type_entity_types_with_FK_to_another_entity_works()
+            => Assert.Equal(
+                CosmosStrings.IndexesExist("BillingOwner.Bill1#BillingDetail", "Country"),
+                Assert.Throws<InvalidOperationException>(
+                    base.Shared_type_entity_types_with_FK_to_another_entity_works).Message);
+
         [ConditionalFact]
         public virtual void Reference_type_is_discovered_as_owned()
         {
@@ -957,5 +1036,7 @@ public class CosmosModelBuilderGenericTest : ModelBuilderTest
     public class CosmosModelBuilderFixture : ModelBuilderFixtureBase
     {
         public override TestHelpers TestHelpers => CosmosTestHelpers.Instance;
+        public override bool ForeignKeysHaveIndexes
+            => false;
     }
 }

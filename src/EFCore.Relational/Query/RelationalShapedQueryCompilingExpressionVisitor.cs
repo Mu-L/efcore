@@ -108,14 +108,14 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
     }
 
     private static readonly MethodInfo NonQueryMethodInfo
-        = typeof(RelationalShapedQueryCompilingExpressionVisitor).GetTypeInfo()
-            .GetDeclaredMethods(nameof(NonQueryResult))
-            .Single(mi => mi.GetParameters().Length == 5);
+        = typeof(RelationalShapedQueryCompilingExpressionVisitor)
+            .GetMethods()
+            .Single(mi => mi.Name == nameof(NonQueryResult) && mi.GetParameters().Length == 5);
 
     private static readonly MethodInfo NonQueryAsyncMethodInfo
-        = typeof(RelationalShapedQueryCompilingExpressionVisitor).GetTypeInfo()
-            .GetDeclaredMethods(nameof(NonQueryResultAsync))
-            .Single(mi => mi.GetParameters().Length == 5);
+        = typeof(RelationalShapedQueryCompilingExpressionVisitor)
+            .GetMethods()
+            .Single(mi => mi.Name == nameof(NonQueryResultAsync) & mi.GetParameters().Length == 5);
 
     /// <summary>
     ///     This is an internal API that supports the Entity Framework Core infrastructure and not subject to
@@ -133,39 +133,28 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
     {
         try
         {
-            if (threadSafetyChecksEnabled)
-            {
-                relationalQueryContext.ConcurrencyDetector.EnterCriticalSection();
-            }
+            using var _ = threadSafetyChecksEnabled
+                ? (ConcurrencyDetectorCriticalSectionDisposer?)relationalQueryContext.ConcurrencyDetector.EnterCriticalSection()
+                : null;
 
-            try
-            {
-                return relationalQueryContext.ExecutionStrategy.Execute(
-                    (relationalQueryContext, relationalCommandResolver, commandSource),
-                    static (_, state) =>
-                    {
-                        EntityFrameworkMetricsData.ReportQueryExecuting();
-
-                        var relationalCommand = state.relationalCommandResolver.RentAndPopulateRelationalCommand(state.relationalQueryContext);
-
-                        return relationalCommand.ExecuteNonQuery(
-                            new RelationalCommandParameterObject(
-                                state.relationalQueryContext.Connection,
-                                state.relationalQueryContext.ParameterValues,
-                                null,
-                                state.relationalQueryContext.Context,
-                                state.relationalQueryContext.CommandLogger,
-                                state.commandSource));
-                    },
-                    null);
-            }
-            finally
-            {
-                if (threadSafetyChecksEnabled)
+            return relationalQueryContext.ExecutionStrategy.Execute(
+                (relationalQueryContext, relationalCommandResolver, commandSource),
+                static (_, state) =>
                 {
-                    relationalQueryContext.ConcurrencyDetector.ExitCriticalSection();
-                }
-            }
+                    EntityFrameworkMetricsData.ReportQueryExecuting();
+
+                    var relationalCommand = state.relationalCommandResolver.RentAndPopulateRelationalCommand(state.relationalQueryContext);
+
+                    return relationalCommand.ExecuteNonQuery(
+                        new RelationalCommandParameterObject(
+                            state.relationalQueryContext.Connection,
+                            state.relationalQueryContext.ParameterValues,
+                            null,
+                            state.relationalQueryContext.Context,
+                            state.relationalQueryContext.CommandLogger,
+                            state.commandSource));
+                },
+                null);
         }
         catch (Exception exception)
         {
@@ -211,41 +200,30 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
     {
         try
         {
-            if (threadSafetyChecksEnabled)
-            {
-                relationalQueryContext.ConcurrencyDetector.EnterCriticalSection();
-            }
+            using var _ = threadSafetyChecksEnabled
+                ? (ConcurrencyDetectorCriticalSectionDisposer?)relationalQueryContext.ConcurrencyDetector.EnterCriticalSection()
+                : null;
 
-            try
-            {
-                return relationalQueryContext.ExecutionStrategy.ExecuteAsync(
-                    (relationalQueryContext, relationalCommandResolver, commandSource),
-                    static (_, state, cancellationToken) =>
-                    {
-                        EntityFrameworkMetricsData.ReportQueryExecuting();
-
-                        var relationalCommand = state.relationalCommandResolver.RentAndPopulateRelationalCommand(state.relationalQueryContext);
-
-                        return relationalCommand.ExecuteNonQueryAsync(
-                            new RelationalCommandParameterObject(
-                                state.relationalQueryContext.Connection,
-                                state.relationalQueryContext.ParameterValues,
-                                null,
-                                state.relationalQueryContext.Context,
-                                state.relationalQueryContext.CommandLogger,
-                                state.commandSource),
-                            cancellationToken);
-                    },
-                    null,
-                    relationalQueryContext.CancellationToken);
-            }
-            finally
-            {
-                if (threadSafetyChecksEnabled)
+            return relationalQueryContext.ExecutionStrategy.ExecuteAsync(
+                (relationalQueryContext, relationalCommandResolver, commandSource),
+                static (_, state, cancellationToken) =>
                 {
-                    relationalQueryContext.ConcurrencyDetector.ExitCriticalSection();
-                }
-            }
+                    EntityFrameworkMetricsData.ReportQueryExecuting();
+
+                    var relationalCommand = state.relationalCommandResolver.RentAndPopulateRelationalCommand(state.relationalQueryContext);
+
+                    return relationalCommand.ExecuteNonQueryAsync(
+                        new RelationalCommandParameterObject(
+                            state.relationalQueryContext.Connection,
+                            state.relationalQueryContext.ParameterValues,
+                            null,
+                            state.relationalQueryContext.Context,
+                            state.relationalQueryContext.CommandLogger,
+                            state.commandSource),
+                        cancellationToken);
+                },
+                null,
+                relationalQueryContext.CancellationToken);
         }
         catch (Exception exception)
         {
@@ -315,9 +293,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                     : (Expression)Constant(null, typeof(Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>));
 
                 return Call(
-                    typeof(GroupBySplitQueryingEnumerable).GetMethods()
-                        .Single(m => m.Name == nameof(GroupBySplitQueryingEnumerable.Create))
-                        .MakeGenericMethod(keySelector.ReturnType, elementSelector.ReturnType),
+                    CreateGroupBySplitQueryingEnumerableMethodInfo.MakeGenericMethod(keySelector.ReturnType, elementSelector.ReturnType),
                     Convert(QueryCompilationContext.QueryContextParameter, typeof(RelationalQueryContext)),
                     relationalCommandResolver,
                     readerColumnsExpression,
@@ -342,9 +318,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
             }
 
             return Call(
-                typeof(GroupBySingleQueryingEnumerable).GetMethods()
-                    .Single(m => m.Name == nameof(GroupBySingleQueryingEnumerable.Create))
-                    .MakeGenericMethod(keySelector.ReturnType, elementSelector.ReturnType),
+                CreateGroupBySingleQueryingEnumerableMethodInfo.MakeGenericMethod(keySelector.ReturnType, elementSelector.ReturnType),
                 Convert(QueryCompilationContext.QueryContextParameter, typeof(RelationalQueryContext)),
                 relationalCommandResolver,
                 readerColumnsExpression,
@@ -383,9 +357,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
             if (nonComposedFromSql)
             {
                 return Call(
-                    typeof(FromSqlQueryingEnumerable).GetMethods()
-                        .Single(m => m.Name == nameof(FromSqlQueryingEnumerable.Create))
-                        .MakeGenericMethod(shaper.ReturnType),
+                    CreateFromSqlQueryingEnumerableMethodInfo.MakeGenericMethod(shaper.ReturnType),
                     Convert(QueryCompilationContext.QueryContextParameter, typeof(RelationalQueryContext)),
                     relationalCommandResolver,
                     readerColumnsExpression,
@@ -418,9 +390,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                         : Constant(null, typeof(Func<QueryContext, IExecutionStrategy, SplitQueryResultCoordinator, Task>));
 
                 return Call(
-                    typeof(SplitQueryingEnumerable).GetMethods()
-                        .Single(m => m.Name == nameof(SplitQueryingEnumerable.Create))
-                        .MakeGenericMethod(shaper.ReturnType),
+                    CreateSplitQueryingEnumerableMethodInfo.MakeGenericMethod(shaper.ReturnType),
                     Convert(QueryCompilationContext.QueryContextParameter, typeof(RelationalQueryContext)),
                     relationalCommandResolver,
                     readerColumnsExpression,
@@ -434,9 +404,7 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
             }
 
             return Call(
-                typeof(SingleQueryingEnumerable).GetMethods()
-                    .Single(m => m.Name == nameof(SingleQueryingEnumerable.Create))
-                    .MakeGenericMethod(shaper.ReturnType),
+                CreateSingleQueryingEnumerableMethodInfo.MakeGenericMethod(shaper.ReturnType),
                 Convert(QueryCompilationContext.QueryContextParameter, typeof(RelationalQueryContext)),
                 relationalCommandResolver,
                 readerColumnsExpression,
@@ -447,6 +415,26 @@ public partial class RelationalShapedQueryCompilingExpressionVisitor : ShapedQue
                 Constant(_threadSafetyChecksEnabled));
         }
     }
+
+    private static readonly MethodInfo CreateFromSqlQueryingEnumerableMethodInfo
+        = typeof(FromSqlQueryingEnumerable)
+            .GetMethod(nameof(FromSqlQueryingEnumerable.Create))!;
+
+    private static readonly MethodInfo CreateSingleQueryingEnumerableMethodInfo
+        = typeof(SingleQueryingEnumerable)
+            .GetMethod(nameof(SingleQueryingEnumerable.Create))!;
+
+    private static readonly MethodInfo CreateSplitQueryingEnumerableMethodInfo
+        = typeof(SplitQueryingEnumerable)
+            .GetMethod(nameof(SplitQueryingEnumerable.Create))!;
+
+    private static readonly MethodInfo CreateGroupBySingleQueryingEnumerableMethodInfo
+        = typeof(GroupBySingleQueryingEnumerable)
+            .GetMethod(nameof(GroupBySingleQueryingEnumerable.Create))!;
+
+    private static readonly MethodInfo CreateGroupBySplitQueryingEnumerableMethodInfo
+        = typeof(GroupBySplitQueryingEnumerable)
+            .GetMethod(nameof(GroupBySplitQueryingEnumerable.Create))!;
 
     private static Expression CreateReaderColumnsExpression(
         IReadOnlyList<ReaderColumn?>? readerColumns,

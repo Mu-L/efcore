@@ -8,15 +8,10 @@ namespace Microsoft.EntityFrameworkCore;
 
 #nullable disable
 
-public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixture>
+public abstract class KeysWithConvertersTestBase<TFixture>(TFixture fixture) : IClassFixture<TFixture>
     where TFixture : KeysWithConvertersTestBase<TFixture>.KeysWithConvertersFixtureBase, new()
 {
-    protected KeysWithConvertersTestBase(TFixture fixture)
-    {
-        Fixture = fixture;
-    }
-
-    protected TFixture Fixture { get; }
+    protected TFixture Fixture { get; } = fixture;
 
     protected DbContext CreateContext()
         => Fixture.CreateContext();
@@ -71,16 +66,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new IntStructKey(3);
 
+            IQueryable<IntStructKeyPrincipal> principalQuery = context.Set<IntStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey(1))),
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = two })),
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 4 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = two })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 4 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new IntStructKey(103);
@@ -169,16 +176,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new ComparableIntStructKey(3);
 
+            IQueryable<ComparableIntStructKeyPrincipal> principalQuery = context.Set<ComparableIntStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(1))),
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = two })),
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 4 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = two })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 4 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new ComparableIntStructKey(103);
@@ -277,17 +296,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new GenericComparableIntStructKey(3);
 
+            IQueryable<GenericComparableIntStructKeyPrincipal> principalQuery = context.Set<GenericComparableIntStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(1))),
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = two })),
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 4 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = two })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 4 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new GenericComparableIntStructKey(103);
@@ -390,16 +420,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = 12;
             var thirteen = new IntStructKey { Id = 13 };
 
+            IQueryable<IntStructKeyPrincipal> principalQuery = context.Set<IntStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 11 })),
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = twelve })),
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<IntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 14 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 11 })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 14 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = 112;
             var oneThirteen = new IntStructKey { Id = 113 };
@@ -489,17 +531,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = 12;
             var thirteen = new ComparableIntStructKey { Id = 13 };
 
+            IQueryable<ComparableIntStructKeyPrincipal> principalQuery = context.Set<ComparableIntStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 11 })),
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = twelve })),
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<ComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 14 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 11 })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 14 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = 112;
             var oneThirteen = new ComparableIntStructKey { Id = 113 };
@@ -598,17 +651,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = 12;
             var thirteen = new GenericComparableIntStructKey { Id = 13 };
 
+            IQueryable<GenericComparableIntStructKeyPrincipal> principalQuery = context.Set<GenericComparableIntStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 11 })),
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = twelve })),
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<GenericComparableIntStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 14 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 11 })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 14 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = 112;
             var oneThirteen = new GenericComparableIntStructKey { Id = 113 };
@@ -711,16 +775,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new IntClassKey(3);
 
+            IQueryable<IntClassKeyPrincipal> principalQuery = context.Set<IntClassKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<IntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntClassKey(1))),
-                await context.Set<IntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntClassKey(two))),
-                await context.Set<IntClassKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<IntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new IntClassKey(103);
@@ -809,16 +885,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new EnumerableClassKey(3);
 
+            IQueryable<EnumerableClassKeyPrincipal> principalQuery = context.Set<EnumerableClassKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<EnumerableClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new EnumerableClassKey(1))),
-                await context.Set<EnumerableClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new EnumerableClassKey(two))),
-                await context.Set<EnumerableClassKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<EnumerableClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new EnumerableClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new EnumerableClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new EnumerableClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new EnumerableClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new EnumerableClassKey(103);
@@ -907,16 +995,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new BareIntClassKey(3);
 
+            IQueryable<BareIntClassKeyPrincipal> principalQuery = context.Set<BareIntClassKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<BareIntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BareIntClassKey(1))),
-                await context.Set<BareIntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BareIntClassKey(two))),
-                await context.Set<BareIntClassKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<BareIntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BareIntClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BareIntClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BareIntClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BareIntClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new BareIntClassKey(103);
@@ -1005,16 +1105,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new ComparableIntClassKey(3);
 
+            IQueryable<ComparableIntClassKeyPrincipal> principalQuery = context.Set<ComparableIntClassKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableIntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(1))),
-                await context.Set<ComparableIntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(two))),
-                await context.Set<ComparableIntClassKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<ComparableIntClassKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new ComparableIntClassKey(103);
@@ -1109,17 +1221,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new BytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<BytesStructKeyPrincipal> principalQuery = context.Set<BytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey(two))),
-                (await context.Set<BytesStructKeyPrincipal>().Include(e => e.OptionalDependents).Where(e => e.Id.Equals(three)).ToListAsync())
-                    .Single(),
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey(two))),
+                (await principalQuery.Where(e => e.Id.Equals(three)).ToListAsync()).Single(),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new BytesStructKey { Id = [103] };
@@ -1215,17 +1338,30 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new StructuralComparableBytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<StructuralComparableBytesStructKeyPrincipal> principalQuery
+                = context.Set<StructuralComparableBytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey(two))),
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(
                     e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new StructuralComparableBytesStructKey { Id = [103] };
@@ -1333,17 +1469,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new ComparableBytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<ComparableBytesStructKeyPrincipal> principalQuery = context.Set<ComparableBytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey(two))),
-                (await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).ToListAsync())
-                    .Where(e => e.Id.Equals(three)).ToList().Single(),
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey(two))),
+                (await principalQuery.ToListAsync()).Where(e => e.Id.Equals(three)).ToList().Single(),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new ComparableBytesStructKey { Id = [103] };
@@ -1446,17 +1593,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new GenericComparableBytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<GenericComparableBytesStructKeyPrincipal> principalQuery = context.Set<GenericComparableBytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey(two))),
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new GenericComparableBytesStructKey { Id = [103] };
@@ -1562,16 +1720,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new BytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<BytesStructKeyPrincipal> principalQuery = context.Set<BytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = twelve })),
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<BytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new BytesStructKey { Id = [113] };
@@ -1666,17 +1836,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new ComparableBytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<ComparableBytesStructKeyPrincipal> principalQuery = context.Set<ComparableBytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = twelve })),
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<ComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new ComparableBytesStructKey { Id = [113] };
@@ -1782,17 +1963,30 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new StructuralComparableBytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<StructuralComparableBytesStructKeyPrincipal> principalQuery
+                = context.Set<StructuralComparableBytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = twelve })),
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<StructuralComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(
                     e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new StructuralComparableBytesStructKey { Id = [113] };
@@ -1900,17 +2094,29 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new GenericComparableBytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<GenericComparableBytesStructKeyPrincipal> principalQuery = context.Set<GenericComparableBytesStructKeyPrincipal>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = twelve })),
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<GenericComparableBytesStructKeyPrincipal>().Include(e => e.RequiredDependents).SingleAsync(
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(
                     e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new GenericComparableBytesStructKey { Id = [113] };
@@ -2371,16 +2577,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new IntStructKey(3);
 
+            IQueryable<IntStructKeyPrincipalShadow> principalQuery = context.Set<IntStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey(1))),
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey(two))),
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new IntStructKey(103);
@@ -2518,16 +2736,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new ComparableIntStructKey(3);
 
+            IQueryable<ComparableIntStructKeyPrincipalShadow> principalQuery = context.Set<ComparableIntStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(1))),
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(two))),
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new ComparableIntStructKey(103);
@@ -2688,17 +2918,29 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new GenericComparableIntStructKey(3);
 
+            IQueryable<GenericComparableIntStructKeyPrincipalShadow> principalQuery
+                = context.Set<GenericComparableIntStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(1))),
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(two))),
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new GenericComparableIntStructKey(103);
@@ -2848,16 +3090,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = 12;
             var thirteen = new IntStructKey { Id = 13 };
 
+            IQueryable<IntStructKeyPrincipalShadow> principalQuery = context.Set<IntStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 11 })),
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = twelve })),
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents).SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<IntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 14 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 11 })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntStructKey { Id = 14 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = 112;
             var oneThirteen = new IntStructKey { Id = 113 };
@@ -2993,17 +3247,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = 12;
             var thirteen = new ComparableIntStructKey { Id = 13 };
 
+            IQueryable<ComparableIntStructKeyPrincipalShadow> principalQuery = context.Set<ComparableIntStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 11 })),
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = twelve })),
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<ComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 14 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 11 })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntStructKey { Id = 14 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = 112;
             var oneThirteen = new ComparableIntStructKey { Id = 113 };
@@ -3166,17 +3431,29 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = 12;
             var thirteen = new GenericComparableIntStructKey { Id = 13 };
 
+            IQueryable<GenericComparableIntStructKeyPrincipalShadow> principalQuery
+                = context.Set<GenericComparableIntStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 11 })),
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = twelve })),
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<GenericComparableIntStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 14 }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 11 })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableIntStructKey { Id = 14 }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = 112;
             var oneThirteen = new GenericComparableIntStructKey { Id = 113 };
@@ -3326,16 +3603,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new IntClassKey(3);
 
+            IQueryable<IntClassKeyPrincipalShadow> principalQuery = context.Set<IntClassKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<IntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntClassKey(1))),
-                await context.Set<IntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntClassKey(two))),
-                await context.Set<IntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<IntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new IntClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new IntClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new IntClassKey(103);
@@ -3472,16 +3761,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new BareIntClassKey(3);
 
+            IQueryable<BareIntClassKeyPrincipalShadow> principalQuery = context.Set<BareIntClassKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<BareIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BareIntClassKey(1))),
-                await context.Set<BareIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BareIntClassKey(two))),
-                await context.Set<BareIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<BareIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BareIntClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BareIntClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BareIntClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BareIntClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new BareIntClassKey(103);
@@ -3618,16 +3919,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = 2;
             var three = new ComparableIntClassKey(3);
 
+            IQueryable<ComparableIntClassKeyPrincipalShadow> principalQuery = context.Set<ComparableIntClassKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(1))),
-                await context.Set<ComparableIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(two))),
-                await context.Set<ComparableIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(e => e.Id.Equals(three)),
-                await context.Set<ComparableIntClassKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(4)))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(1))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(two))),
+                await principalQuery.SingleAsync(e => e.Id.Equals(three)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableIntClassKey(4)))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = 102;
             var oneOhThree = new ComparableIntClassKey(103);
@@ -3770,17 +4083,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new BytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<BytesStructKeyPrincipalShadow> principalQuery = context.Set<BytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey(two))),
-                (await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).Where(e => e.Id.Equals(three)).ToListAsync())
-                    .Single(),
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey(two))),
+                (await principalQuery.Where(e => e.Id.Equals(three)).ToListAsync()).Single(),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new BytesStructKey { Id = [103] };
@@ -3946,18 +4270,30 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new StructuralComparableBytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<StructuralComparableBytesStructKeyPrincipalShadow> principalQuery
+                = context.Set<StructuralComparableBytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey(two))),
-                (await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .Where(e => e.Id.Equals(three)).ToListAsync())
-                    .Single(),
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey(two))),
+                (await principalQuery.Where(e => e.Id.Equals(three)).ToListAsync()).Single(),
+                await principalQuery.SingleAsync(
                     e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new StructuralComparableBytesStructKey { Id = [103] };
@@ -4129,18 +4465,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new ComparableBytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<ComparableBytesStructKeyPrincipalShadow> principalQuery = context.Set<ComparableBytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey(two))),
-                (await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).Where(e => e.Id.Equals(three))
-                    .ToListAsync())
-                    .Single(),
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey(two))),
+                (await principalQuery.Where(e => e.Id.Equals(three)).ToListAsync()).Single(),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new ComparableBytesStructKey { Id = [103] };
@@ -4314,18 +4660,29 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var two = new byte[] { 2, 2 };
             var three = new GenericComparableBytesStructKey { Id = [3, 3, 3] };
 
+            IQueryable<GenericComparableBytesStructKeyPrincipalShadow> principalQuery
+                = context.Set<GenericComparableBytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.OptionalDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 1 } })),
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey(two))),
-                (await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents)
-                    .Where(e => e.Id.Equals(three)).ToListAsync())
-                    .Single(),
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.OptionalDependents).SingleAsync(
-                    e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 1 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey(two))),
+                (await principalQuery.Where(e => e.Id.Equals(three)).ToListAsync()).Single(),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 4, 4, 4, 4 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.OptionalDependents).LoadAsync();
+                }
+            }
 
             var oneOhTwo = new byte[] { 102 };
             var oneOhThree = new GenericComparableBytesStructKey { Id = [103] };
@@ -4481,16 +4838,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new BytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<BytesStructKeyPrincipalShadow> principalQuery = context.Set<BytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = twelve })),
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents).SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<BytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new BytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new BytesStructKey { Id = [113] };
@@ -4658,17 +5027,28 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new ComparableBytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<ComparableBytesStructKeyPrincipalShadow> principalQuery = context.Set<ComparableBytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = twelve })),
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<ComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents).SingleAsync(
-                    e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new ComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new ComparableBytesStructKey { Id = [113] };
@@ -4844,17 +5224,30 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new StructuralComparableBytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<StructuralComparableBytesStructKeyPrincipalShadow> principalQuery
+                = context.Set<StructuralComparableBytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = twelve })),
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<StructuralComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents).SingleAsync(
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(
                     e => e.Id.Equals(new StructuralComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new StructuralComparableBytesStructKey { Id = [113] };
@@ -5033,17 +5426,30 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
             var twelve = new byte[] { 12, 12 };
             var thirteen = new GenericComparableBytesStructKey { Id = [13, 13, 13] };
 
+            IQueryable<GenericComparableBytesStructKeyPrincipalShadow> principalQuery
+                = context.Set<GenericComparableBytesStructKeyPrincipalShadow>();
+
+            if (Fixture.UseInclude)
+            {
+                principalQuery = principalQuery.Include(e => e.RequiredDependents);
+            }
+
             principals =
             [
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 11 } })),
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = twelve })),
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents)
-                    .SingleAsync(e => e.Id.Equals(thirteen)),
-                await context.Set<GenericComparableBytesStructKeyPrincipalShadow>().Include(e => e.RequiredDependents).SingleAsync(
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 11 } })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(new GenericComparableBytesStructKey { Id = twelve })),
+                await principalQuery.SingleAsync(e => e.Id.Equals(thirteen)),
+                await principalQuery.SingleAsync(
                     e => e.Id.Equals(new GenericComparableBytesStructKey { Id = new byte[] { 14, 14, 14, 14 } }))
             ];
+
+            if (!Fixture.UseInclude)
+            {
+                foreach (var principal in principals)
+                {
+                    await context.Entry(principal).Collection(e => e.RequiredDependents).LoadAsync();
+                }
+            }
 
             var oneTwelve = new byte[] { 112 };
             var oneThirteen = new GenericComparableBytesStructKey { Id = [113] };
@@ -6662,21 +7068,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; }
     }
 
-    protected class OwnerIntStructKey
+    protected class OwnerIntStructKey(IntStructKey id, OwnedIntStructKey owned)
     {
         public OwnerIntStructKey(IntStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerIntStructKey(IntStructKey id, OwnedIntStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public IntStructKey Id { get; set; }
-        public OwnedIntStructKey Owned { get; set; }
+        public IntStructKey Id { get; set; } = id;
+        public OwnedIntStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedIntStructKey(int position)
@@ -6684,21 +7084,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerBytesStructKey
+    protected class OwnerBytesStructKey(BytesStructKey id, OwnedBytesStructKey owned)
     {
         public OwnerBytesStructKey(BytesStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerBytesStructKey(BytesStructKey id, OwnedBytesStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public BytesStructKey Id { get; set; }
-        public OwnedBytesStructKey Owned { get; set; }
+        public BytesStructKey Id { get; set; } = id;
+        public OwnedBytesStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedBytesStructKey(int position)
@@ -6706,21 +7100,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerComparableIntStructKey
+    protected class OwnerComparableIntStructKey(ComparableIntStructKey id, OwnedComparableIntStructKey owned)
     {
         public OwnerComparableIntStructKey(ComparableIntStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerComparableIntStructKey(ComparableIntStructKey id, OwnedComparableIntStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public ComparableIntStructKey Id { get; set; }
-        public OwnedComparableIntStructKey Owned { get; set; }
+        public ComparableIntStructKey Id { get; set; } = id;
+        public OwnedComparableIntStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedComparableIntStructKey(int position)
@@ -6728,21 +7116,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerComparableBytesStructKey
+    protected class OwnerComparableBytesStructKey(ComparableBytesStructKey id, OwnedComparableBytesStructKey owned)
     {
         public OwnerComparableBytesStructKey(ComparableBytesStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerComparableBytesStructKey(ComparableBytesStructKey id, OwnedComparableBytesStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public ComparableBytesStructKey Id { get; set; }
-        public OwnedComparableBytesStructKey Owned { get; set; }
+        public ComparableBytesStructKey Id { get; set; } = id;
+        public OwnedComparableBytesStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedComparableBytesStructKey(int position)
@@ -6750,21 +7132,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerGenericComparableIntStructKey
+    protected class OwnerGenericComparableIntStructKey(GenericComparableIntStructKey id, OwnedGenericComparableIntStructKey owned)
     {
         public OwnerGenericComparableIntStructKey(GenericComparableIntStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerGenericComparableIntStructKey(GenericComparableIntStructKey id, OwnedGenericComparableIntStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public GenericComparableIntStructKey Id { get; set; }
-        public OwnedGenericComparableIntStructKey Owned { get; set; }
+        public GenericComparableIntStructKey Id { get; set; } = id;
+        public OwnedGenericComparableIntStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedGenericComparableIntStructKey(int position)
@@ -6772,21 +7148,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerGenericComparableBytesStructKey
+    protected class OwnerGenericComparableBytesStructKey(GenericComparableBytesStructKey id, OwnedGenericComparableBytesStructKey owned)
     {
         public OwnerGenericComparableBytesStructKey(GenericComparableBytesStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerGenericComparableBytesStructKey(GenericComparableBytesStructKey id, OwnedGenericComparableBytesStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public GenericComparableBytesStructKey Id { get; set; }
-        public OwnedGenericComparableBytesStructKey Owned { get; set; }
+        public GenericComparableBytesStructKey Id { get; set; } = id;
+        public OwnedGenericComparableBytesStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedGenericComparableBytesStructKey(int position)
@@ -6794,23 +7164,17 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerStructuralComparableBytesStructKey
+    protected class OwnerStructuralComparableBytesStructKey(
+        StructuralComparableBytesStructKey id,
+        OwnedStructuralComparableBytesStructKey owned)
     {
         public OwnerStructuralComparableBytesStructKey(StructuralComparableBytesStructKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerStructuralComparableBytesStructKey(
-            StructuralComparableBytesStructKey id,
-            OwnedStructuralComparableBytesStructKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public StructuralComparableBytesStructKey Id { get; set; }
-        public OwnedStructuralComparableBytesStructKey Owned { get; set; }
+        public StructuralComparableBytesStructKey Id { get; set; } = id;
+        public OwnedStructuralComparableBytesStructKey Owned { get; set; } = owned;
     }
 
     protected class OwnedStructuralComparableBytesStructKey(int position)
@@ -6818,21 +7182,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerIntClassKey
+    protected class OwnerIntClassKey(IntClassKey id, OwnedIntClassKey owned)
     {
         public OwnerIntClassKey(IntClassKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerIntClassKey(IntClassKey id, OwnedIntClassKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public IntClassKey Id { get; set; }
-        public OwnedIntClassKey Owned { get; set; }
+        public IntClassKey Id { get; set; } = id;
+        public OwnedIntClassKey Owned { get; set; } = owned;
     }
 
     protected class OwnedIntClassKey(int position)
@@ -6840,21 +7198,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerBareIntClassKey
+    protected class OwnerBareIntClassKey(BareIntClassKey id, OwnedBareIntClassKey owned)
     {
         public OwnerBareIntClassKey(BareIntClassKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerBareIntClassKey(BareIntClassKey id, OwnedBareIntClassKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public BareIntClassKey Id { get; set; }
-        public OwnedBareIntClassKey Owned { get; set; }
+        public BareIntClassKey Id { get; set; } = id;
+        public OwnedBareIntClassKey Owned { get; set; } = owned;
     }
 
     protected class OwnedBareIntClassKey(int position)
@@ -6862,21 +7214,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerComparableIntClassKey
+    protected class OwnerComparableIntClassKey(ComparableIntClassKey id, OwnedComparableIntClassKey owned)
     {
         public OwnerComparableIntClassKey(ComparableIntClassKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerComparableIntClassKey(ComparableIntClassKey id, OwnedComparableIntClassKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public ComparableIntClassKey Id { get; set; }
-        public OwnedComparableIntClassKey Owned { get; set; }
+        public ComparableIntClassKey Id { get; set; } = id;
+        public OwnedComparableIntClassKey Owned { get; set; } = owned;
     }
 
     protected class OwnedComparableIntClassKey(int position)
@@ -6884,21 +7230,15 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
         public int Position { get; set; } = position;
     }
 
-    protected class OwnerGenericComparableIntClassKey
+    protected class OwnerGenericComparableIntClassKey(GenericComparableIntClassKey id, OwnedGenericComparableIntClassKey owned)
     {
         public OwnerGenericComparableIntClassKey(GenericComparableIntClassKey id)
+            : this(id, null)
         {
-            Id = id;
         }
 
-        public OwnerGenericComparableIntClassKey(GenericComparableIntClassKey id, OwnedGenericComparableIntClassKey owned)
-        {
-            Id = id;
-            Owned = owned;
-        }
-
-        public GenericComparableIntClassKey Id { get; set; }
-        public OwnedGenericComparableIntClassKey Owned { get; set; }
+        public GenericComparableIntClassKey Id { get; set; } = id;
+        public OwnedGenericComparableIntClassKey Owned { get; set; } = owned;
     }
 
     protected class OwnedGenericComparableIntClassKey(int position)
@@ -6910,6 +7250,9 @@ public abstract class KeysWithConvertersTestBase<TFixture> : IClassFixture<TFixt
     {
         protected override string StoreName
             => "KeysWithConverters";
+
+        public virtual bool UseInclude
+            => true;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder, DbContext context)
         {
